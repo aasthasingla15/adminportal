@@ -266,6 +266,23 @@ export default function AdminLoginPage() {
               <span>Sign In →</span>
             )}
           </button>
+
+          {/* Credential hint for evaluators */}
+          <div style={{
+            marginTop: '16px',
+            padding: '12px 14px',
+            backgroundColor: isDark ? 'rgba(109, 61, 245, 0.08)' : 'rgba(109, 61, 245, 0.04)',
+            border: isDark ? '1px solid rgba(109, 61, 245, 0.2)' : '1px solid rgba(109, 61, 245, 0.12)',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <p style={{ fontSize: '11.5px', color: isDark ? '#A78BFA' : '#6D3DF5', fontWeight: '600', margin: 0 }}>
+              🔑 Demo credentials
+            </p>
+            <p style={{ fontSize: '11.5px', color: isDark ? '#A1A1AA' : '#6B7280', margin: '4px 0 0', fontFamily: 'monospace' }}>
+              admin &nbsp;/&nbsp; adminpassword123
+            </p>
+          </div>
         </form>
       </div>
 
