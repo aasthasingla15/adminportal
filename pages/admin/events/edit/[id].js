@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { FileText, Calendar, MapPin, Tag, Link as LinkIcon, ImageIcon, Loader2, ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react';
-import dbConnect from '../../../lib/mongodb';
-import Event from '../../../models/Event';
-import AdminLayout from '../../../components/AdminLayout';
-import LiveEventCardPreview from '../../../components/EventCard';
-import { saveLocalEvent, getLocalEventById } from '../../../lib/eventStorage';
+import dbConnect from '../../../../lib/mongodb';
+import Event from '../../../../models/Event';
+import AdminLayout from '../../../../components/AdminLayout';
+import LiveEventCardPreview from '../../../../components/EventCard';
+import { saveLocalEvent, getLocalEventById } from '../../../../lib/eventStorage';
 
 export async function getServerSideProps(context) {
   const { id } = context.params;
