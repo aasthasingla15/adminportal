@@ -31,7 +31,8 @@ export async function getServerSideProps() {
     return {
       props: {
         upcomingEvents: events,
-        featuredEvent
+        featuredEvent,
+        fromDb: true
       }
     };
   } catch (err) {
@@ -93,13 +94,14 @@ export async function getServerSideProps() {
     return {
       props: {
         upcomingEvents: mockEvents,
-        featuredEvent: mockEvents[0]
+        featuredEvent: mockEvents[0],
+        fromDb: false
       }
     };
   }
 }
 
-export default function Home({ upcomingEvents, featuredEvent }) {
+export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
   const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -115,18 +117,23 @@ export default function Home({ upcomingEvents, featuredEvent }) {
   });
 
   useEffect(() => {
-    // Client-side hydration sync for offline fallback
-    const localEvents = getLocalEvents();
-    const todayString = new Date().toISOString().split('T')[0];
-    const upcomingOnly = localEvents.filter(e => e.status === 'Upcoming' && e.date >= todayString);
-    setActiveEvents(upcomingOnly);
-
-    let feat = upcomingOnly.find(e => e.featured === true) || null;
-    if (!feat && upcomingOnly.length > 0) {
-      feat = upcomingOnly[0];
+    // Only load localStorage offline fallback if database failed or returned no events
+    if (!fromDb || upcomingEvents.length === 0) {
+      const localEvents = getLocalEvents();
+      const todayString = new Date().toISOString().split('T')[0];
+      const upcomingOnly = localEvents.filter(e => e.status === 'Upcoming' && e.date >= todayString);
+      
+      // If there are actual local events, use them
+      if (upcomingOnly.length > 0) {
+        setActiveEvents(upcomingOnly);
+        let feat = upcomingOnly.find(e => e.featured === true) || null;
+        if (!feat && upcomingOnly.length > 0) {
+          feat = upcomingOnly[0];
+        }
+        setActiveFeatured(feat);
+      }
     }
-    setActiveFeatured(feat);
-  }, []);
+  }, [fromDb, upcomingEvents]);
 
   useEffect(() => {
     const handleReveal = () => {

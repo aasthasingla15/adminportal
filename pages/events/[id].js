@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { Calendar, MapPin, Tag, ArrowUpRight, ArrowLeft, Clock } from 'lucide-react';
@@ -6,6 +7,7 @@ import Event from '../../models/Event';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useTheme } from '../../context/ThemeContext';
+import { getLocalEvents } from '../../lib/eventStorage';
 
 export async function getServerSideProps(context) {
   const { id } = context.params;
@@ -65,11 +67,13 @@ export async function getServerSideProps(context) {
     }
   ];
 
-  if (String(id).startsWith('mock-')) {
+  if (String(id).startsWith('mock-') || String(id).startsWith('local-')) {
     const foundMock = mockEvents.find(e => e._id === id);
     if (foundMock) {
       return { props: { event: foundMock } };
     }
+    // Return empty shell so client-side component can fetch it from localStorage
+    return { props: { event: { _id: id, title: '', description: '', date: '', time: '', venue: '', category: 'Workshop', bannerImage: '', registrationLink: '', status: 'Upcoming', featured: false } } };
   }
 
   try {
@@ -95,9 +99,22 @@ export async function getServerSideProps(context) {
   }
 }
 
-export default function EventDetailPage({ event }) {
+export default function EventDetailPage({ event: initialEvent }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const [event, setEvent] = useState(initialEvent);
+
+  useEffect(() => {
+    if (String(initialEvent._id).startsWith('mock-') || String(initialEvent._id).startsWith('local-')) {
+      const localEvents = getLocalEvents();
+      const found = localEvents.find(e => e._id === initialEvent._id);
+      if (found) {
+        setEvent(found);
+      }
+    } else {
+      setEvent(initialEvent);
+    }
+  }, [initialEvent]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
