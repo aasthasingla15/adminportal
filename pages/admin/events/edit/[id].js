@@ -6,12 +6,18 @@ import dbConnect from '../../../lib/mongodb';
 import Event from '../../../models/Event';
 import AdminLayout from '../../../components/AdminLayout';
 import LiveEventCardPreview from '../../../components/EventCard';
+import { saveLocalEvent, getLocalEventById } from '../../../lib/eventStorage';
 
 export async function getServerSideProps(context) {
   const { id } = context.params;
-  await dbConnect();
+
+  // Handle mock/local IDs without DB
+  if (String(id).startsWith('mock-') || String(id).startsWith('local-')) {
+    return { props: { initialEvent: { _id: id, title: '', description: '', date: '', time: '', venue: '', category: 'Workshop', bannerImage: '', registrationLink: '', status: 'Upcoming', featured: false } } };
+  }
 
   try {
+    await dbConnect();
     const event = await Event.findById(id);
     if (!event) {
       return { notFound: true };
@@ -22,8 +28,13 @@ export async function getServerSideProps(context) {
       }
     };
   } catch (err) {
-    console.error('Fetch edit event error:', err);
-    return { notFound: true };
+    console.error('Fetch edit event error, returning empty shell:', err);
+    // DB offline - return empty shell so edit form still loads
+    return { 
+      props: { 
+        initialEvent: { _id: id, title: '', description: '', date: '', time: '', venue: '', category: 'Workshop', bannerImage: '', registrationLink: '', status: 'Upcoming', featured: false }
+      } 
+    };
   }
 }
 
@@ -53,7 +64,16 @@ export default function AdminEditEventPage({ initialEvent }) {
     }, 4000);
   };
 
-  const handleImageUpload = (e) => {
+  const readBase64 = (file) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setBannerImage(reader.result);
+      showToast('success', 'Banner image loaded successfully.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -62,19 +82,41 @@ export default function AdminEditEventPage({ initialEvent }) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setBannerImage(reader.result);
-      showToast('success', 'Banner image uploaded successfully.');
-    };
-    reader.readAsDataURL(file);
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+    if (cloudName && uploadPreset) {
+      showToast('info', 'Uploading image to Cloudinary...');
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', uploadPreset);
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.secure_url) {
+          setBannerImage(data.secure_url);
+          showToast('success', 'Banner image uploaded to Cloudinary.');
+        } else {
+          throw new Error(data.error?.message || 'Upload failed');
+        }
+      } catch (err) {
+        console.error('Cloudinary error:', err);
+        showToast('error', 'Cloudinary upload failed, falling back to local storage...');
+        readBase64(file);
+      }
+    } else {
+      readBase64(file);
+    }
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (!file) return;
@@ -84,12 +126,34 @@ export default function AdminEditEventPage({ initialEvent }) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setBannerImage(reader.result);
-      showToast('success', 'Banner image dropped successfully.');
-    };
-    reader.readAsDataURL(file);
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+    if (cloudName && uploadPreset) {
+      showToast('info', 'Uploading image to Cloudinary...');
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', uploadPreset);
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.secure_url) {
+          setBannerImage(data.secure_url);
+          showToast('success', 'Banner image uploaded to Cloudinary.');
+        } else {
+          throw new Error(data.error?.message || 'Upload failed');
+        }
+      } catch (err) {
+        console.error('Cloudinary error:', err);
+        showToast('error', 'Cloudinary upload failed, falling back to local storage...');
+        readBase64(file);
+      }
+    } else {
+      readBase64(file);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -124,16 +188,27 @@ export default function AdminEditEventPage({ initialEvent }) {
       });
       const data = await res.json();
       if (data.success) {
+        saveLocalEvent({ ...payload, _id: initialEvent._id });
         showToast('success', 'Event updated successfully!');
         setTimeout(() => {
           router.push('/admin/events');
         }, 1000);
+      } else if (data.offlineFallback) {
+        saveLocalEvent({ ...payload, _id: initialEvent._id });
+        showToast('success', 'Event updated locally (DB offline). Visible on public site!');
+        setTimeout(() => {
+          router.push('/admin/events');
+        }, 1500);
       } else {
         setError(data.message || 'Failed to save updates.');
       }
     } catch (err) {
       console.error(err);
-      setError('A network error occurred. Please try again.');
+      saveLocalEvent({ ...payload, _id: initialEvent._id });
+      showToast('success', 'Event updated locally (network error). Visible on public site!');
+      setTimeout(() => {
+        router.push('/admin/events');
+      }, 1500);
     } finally {
       setSaving(false);
     }

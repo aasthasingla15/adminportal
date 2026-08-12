@@ -37,10 +37,12 @@ export default async function handler(req, res) {
   switch (method) {
     case 'GET':
       try {
+        await dbConnect();
         const events = await Event.find({}).sort({ date: 1 });
         res.status(200).json({ success: true, data: events });
       } catch (error) {
-        res.status(400).json({ success: false, message: error.message });
+        console.error('Database connection failed in GET, triggering offlineFallback:', error);
+        res.status(200).json({ success: false, offlineFallback: true, message: error.message });
       }
       break;
 
@@ -52,10 +54,15 @@ export default async function handler(req, res) {
       }
 
       try {
+        await dbConnect();
+        if (req.body.featured === true) {
+          await Event.updateMany({}, { featured: false });
+        }
         const event = await Event.create(req.body);
         res.status(201).json({ success: true, data: event });
       } catch (error) {
-        res.status(400).json({ success: false, message: error.message });
+        console.error('Database connection failed in POST, triggering offlineFallback:', error);
+        res.status(200).json({ success: false, offlineFallback: true, message: error.message });
       }
       break;
 

@@ -126,11 +126,11 @@ export default function ContactPage() {
                   color: isDark ? '#A78BFA' : '#6D3DF5',
                   flexShrink: 0
                 }}>
-                  <MapPin size={16} />
+                  <Phone size={16} />
                 </div>
                 <div>
-                  <p style={{ fontSize: '11px', fontWeight: '700', color: isDark ? '#A1A1AA' : '#6B7280', textTransform: 'uppercase', marginBottom: '2px' }}>Office</p>
-                  <span style={{ fontSize: '13.5px', color: isDark ? '#FFFFFF' : '#111111', fontWeight: '600' }}>Microsoft Student Chapter Room, block C, IGDTUW campus</span>
+                  <p style={{ fontSize: '11px', fontWeight: '700', color: isDark ? '#A1A1AA' : '#6B7280', textTransform: 'uppercase', marginBottom: '2px' }}>Phone</p>
+                  <span style={{ fontSize: '13.5px', color: isDark ? '#FFFFFF' : '#111111', fontWeight: '600' }}>8360022379</span>
                 </div>
               </div>
             </div>

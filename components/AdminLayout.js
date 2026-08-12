@@ -3,8 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { 
-  Shield, LayoutDashboard, ListChecks, CalendarDays, Tags, Users, 
-  LineChart, Settings, LogOut, Search, Bell, ChevronDown, Menu, X, Loader2
+  Shield, LayoutDashboard, ListChecks, Plus, LogOut, Search, Bell, ChevronDown, Menu, X, Loader2
 } from 'lucide-react';
 import AdminStyles from '../styles/Admin.module.css';
 
@@ -47,13 +46,9 @@ export default function AdminLayout({ children, pageTitle = "Admin Dashboard" })
   };
 
   const menuItems = [
-    { name: 'Overview', path: '/admin', icon: <LayoutDashboard size={18} /> },
+    { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={18} /> },
     { name: 'Events', path: '/admin/events', icon: <ListChecks size={18} /> },
-    { name: 'Calendar', path: '/admin/calendar', icon: <CalendarDays size={18} /> },
-    { name: 'Categories', path: '/admin/categories', icon: <Tags size={18} /> },
-    { name: 'Registrations', path: '/admin/registrations', icon: <Users size={18} /> },
-    { name: 'Analytics', path: '/admin/analytics', icon: <LineChart size={18} /> },
-    { name: 'Settings', path: '/admin/settings', icon: <Settings size={18} /> }
+    { name: 'Add Event', path: '/admin/events/create', icon: <Plus size={18} /> }
   ];
 
   if (authChecking) {

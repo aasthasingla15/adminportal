@@ -29,15 +29,19 @@ A premium, modern event management platform and administrative CMS. This applica
    - Live-rendering tilt card views inside the admin panel.
    - Delete entries securely with confirmation controls.
 
-6. **Image Uploads (Base64 Data URIs)**:
-   - Drag-and-drop file interface converting images to Base64 strings. This enables local execution without external storage hosts (AWS S3 or Cloudinary).
-   - Raised body parser size limits to `10MB` for reliable asset processing.
+6. **Image Uploads (Cloudinary with Base64 Fallback)**:
+   - Supports direct unsigned file uploads to Cloudinary. If `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` and `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` are configured in `.env.local`, banners are uploaded directly to Cloudinary and stored as secure HTTPS URLs in MongoDB.
+   - If not configured, or if the API call fails, the client automatically falls back to encoding the files as Base64 strings. This guarantees out-of-the-box functionality without mandatory configuration, while supporting a production-ready image storage strategy.
 
-7. **Public Search, Categories, & Pagination**:
-   - Real-time search query checking against event titles, descriptions, and venues.
-   - Horizontal category filter buttons matching the editorial aesthetic.
-   - Responsive page navigation controls (8 items per page) to support large numbers of events smoothly.
-   - "Register Now" buttons opening the event's external link in a new browser tab.
+7. **Automatic Unfeaturing Hook**:
+   - The backend API (`POST /api/events` and `PUT /api/events/[id]`) automatically updates other entries to set `featured: false` if a new/updated event is flagged as featured. This guarantees only one spotlight event exists at a time.
+
+8. **Dynamic Past Events Exclusion**:
+   - The public Homepage Carousel and Events Listing pages compare event date strings with the current date, automatically excluding past events from the "Upcoming Events" listings.
+
+9. **Dashboard Layout Realignment**:
+   - Rewrote the Admin overview dashboard (`/admin`) to match the requested wireframe structure, rendering statistics cards (Total, Upcoming, Categories, Published) and a Recent Events list with action button links (View, Edit, Delete).
+   - Custom CSS collapses columns and hides auxiliary table cells on small viewports for responsive sizing.
 
 ---
 

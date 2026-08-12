@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EventCard from '../../components/EventCard';
 import { useTheme } from '../../context/ThemeContext';
+import { getLocalEvents } from '../../lib/eventStorage';
 
 export default function EventsPage() {
   const [events, setEvents] = useState([]);
@@ -24,12 +25,26 @@ export default function EventsPage() {
       try {
         const res = await fetch('/api/events');
         const data = await res.json();
-        if (data.success) {
-          setEvents(data.data);
-          setFilteredEvents(data.data);
+        
+        if (data.success && data.data && data.data.length > 0) {
+          const todayString = new Date().toISOString().split('T')[0];
+          const upcomingOnly = data.data.filter(e => e.status === 'Upcoming' && e.date >= todayString);
+          setEvents(upcomingOnly);
+          setFilteredEvents(upcomingOnly);
+        } else {
+          const localEvents = getLocalEvents();
+          const todayString = new Date().toISOString().split('T')[0];
+          const upcomingOnly = localEvents.filter(e => e.status === 'Upcoming' && e.date >= todayString);
+          setEvents(upcomingOnly);
+          setFilteredEvents(upcomingOnly);
         }
       } catch (err) {
-        console.error('Failed to retrieve events:', err);
+        console.error('Failed to retrieve events, loading fallback:', err);
+        const localEvents = getLocalEvents();
+        const todayString = new Date().toISOString().split('T')[0];
+        const upcomingOnly = localEvents.filter(e => e.status === 'Upcoming' && e.date >= todayString);
+        setEvents(upcomingOnly);
+        setFilteredEvents(upcomingOnly);
       } finally {
         setLoading(false);
       }

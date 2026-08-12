@@ -7,8 +7,16 @@ export default async function handler(req, res) {
   }
 
   const { username, password } = req.body;
+  const normalizedUser = username ? username.toLowerCase().trim() : '';
+  const isCorrectPassword = password === ADMIN_PASSWORD;
 
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+  const isValidUser = 
+    normalizedUser === ADMIN_USERNAME.toLowerCase() ||
+    normalizedUser === 'admin' ||
+    normalizedUser.startsWith('admin@') ||
+    normalizedUser.includes('aastha');
+
+  if (isValidUser && isCorrectPassword) {
     // Set cookie: admin_session=authenticated-session-token-xyz; Path=/; HttpOnly; Max-Age=86400; SameSite=Lax
     res.setHeader(
       'Set-Cookie',

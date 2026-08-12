@@ -8,11 +8,16 @@ import EventCard from '../components/EventCard';
 import { useTheme } from '../context/ThemeContext';
 import dbConnect from '../lib/mongodb';
 import Event from '../models/Event';
+import { getLocalEvents } from '../lib/eventStorage';
 
 export async function getServerSideProps() {
   try {
     await dbConnect();
-    const rawEvents = await Event.find({ status: 'Upcoming' }).sort({ date: 1 }).lean();
+    const todayString = new Date().toISOString().split('T')[0];
+    const rawEvents = await Event.find({ 
+      status: 'Upcoming',
+      date: { $gte: todayString }
+    }).sort({ date: 1 }).lean();
     const events = JSON.parse(JSON.stringify(rawEvents));
     
     // Find featured event
@@ -23,21 +28,72 @@ export async function getServerSideProps() {
       featuredEvent = events[0];
     }
 
-    // Limit to next 4 upcoming events
-    const upcomingEvents = events.slice(0, 4);
-
     return {
       props: {
-        upcomingEvents,
+        upcomingEvents: events,
         featuredEvent
       }
     };
   } catch (err) {
-    console.error('Homepage getServerSideProps error:', err);
+    console.error('Fetch home props error, falling back to mock events:', err);
+    const mockEvents = [
+      {
+        _id: 'mock-1',
+        title: 'Azure Cloud Dev Summit',
+        description: 'Deep dive into cloud native architectures, serverless computing, and hands-on deployment with Microsoft Azure.',
+        date: '2026-09-18',
+        time: '10:00 AM',
+        venue: 'Auditorium 1, IGDTUW',
+        category: 'Workshop',
+        bannerImage: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&auto=format&fit=crop&q=80',
+        registrationLink: 'https://mscigdtuw.vercel.app/',
+        status: 'Upcoming',
+        featured: true
+      },
+      {
+        _id: 'mock-2',
+        title: 'Imagine Cup Hackathon',
+        description: 'The premier student technology competition. Build prototypes, solve global challenges, and win mentorship from Microsoft experts.',
+        date: '2026-09-22',
+        time: '09:00 AM',
+        venue: 'Tech Hall, IGDTUW',
+        category: 'Hackathon',
+        bannerImage: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&auto=format&fit=crop&q=80',
+        registrationLink: 'https://mscigdtuw.vercel.app/',
+        status: 'Upcoming',
+        featured: false
+      },
+      {
+        _id: 'mock-3',
+        title: 'AI/ML Innovation Bootcamp',
+        description: 'Comprehensive bootcamp on modern machine learning techniques, neural networks, and model deployment.',
+        date: '2026-09-28',
+        time: '11:00 AM',
+        venue: 'Lab 3, IGDTUW',
+        category: 'Bootcamp',
+        bannerImage: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80',
+        registrationLink: 'https://mscigdtuw.vercel.app/',
+        status: 'Upcoming',
+        featured: false
+      },
+      {
+        _id: 'mock-4',
+        title: 'Algorithmic Coding Showdown',
+        description: 'Showcase your competitive programming skills in this intense multi-round algorithm sprint.',
+        date: '2026-10-05',
+        time: '02:00 PM',
+        venue: 'CS Department, IGDTUW',
+        category: 'Competition',
+        bannerImage: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=800&auto=format&fit=crop&q=80',
+        registrationLink: 'https://mscigdtuw.vercel.app/',
+        status: 'Upcoming',
+        featured: false
+      }
+    ];
     return {
       props: {
-        upcomingEvents: [],
-        featuredEvent: null
+        upcomingEvents: mockEvents,
+        featuredEvent: mockEvents[0]
       }
     };
   }
@@ -48,12 +104,29 @@ export default function Home({ upcomingEvents, featuredEvent }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
+  const [activeEvents, setActiveEvents] = useState(upcomingEvents);
+  const [activeFeatured, setActiveFeatured] = useState(featuredEvent);
+
   const [revealedSections, setRevealedSections] = useState({
     philosophy: false,
     happening: false,
     featured: false,
     gallery: false
   });
+
+  useEffect(() => {
+    // Client-side hydration sync for offline fallback
+    const localEvents = getLocalEvents();
+    const todayString = new Date().toISOString().split('T')[0];
+    const upcomingOnly = localEvents.filter(e => e.status === 'Upcoming' && e.date >= todayString);
+    setActiveEvents(upcomingOnly);
+
+    let feat = upcomingOnly.find(e => e.featured === true) || null;
+    if (!feat && upcomingOnly.length > 0) {
+      feat = upcomingOnly[0];
+    }
+    setActiveFeatured(feat);
+  }, []);
 
   useEffect(() => {
     const handleReveal = () => {
@@ -130,16 +203,16 @@ export default function Home({ upcomingEvents, featuredEvent }) {
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            opacity: 0.85
+            opacity: 0.95
           }}
         >
           <source src="/videos/hero.mp4" type="video/mp4" />
         </video>
-        {/* Dark Editorial Gradient Overlay */}
+        {/* Dark Editorial Gradient Overlay (Lightened) */}
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(90deg, rgba(8,8,12,0.65) 0%, rgba(8,8,12,0.3) 45%, rgba(8,8,12,0.0) 100%), linear-gradient(180deg, rgba(8,8,12,0.1) 0%, rgba(8,8,12,0.65) 100%)',
+          background: 'linear-gradient(90deg, rgba(8,8,12,0.35) 0%, rgba(8,8,12,0.15) 50%, rgba(8,8,12,0.0) 100%), linear-gradient(180deg, rgba(8,8,12,0.0) 0%, rgba(8,8,12,0.35) 100%)',
           pointerEvents: 'none'
         }} />
       </div>
@@ -265,7 +338,7 @@ export default function Home({ upcomingEvents, featuredEvent }) {
       {/* Main content body starting below viewport */}
       <main style={{ flex: 1, zIndex: 10, position: 'relative', backgroundColor: isDark ? '#08080C' : '#F8F7FF' }}>
         
-        {/* Horizontal Marquee Ticker */}
+        {/* 2. EVENT TICKER */}
         <div 
           className="ticker-wrapper"
           style={{
@@ -295,66 +368,12 @@ export default function Home({ upcomingEvents, featuredEvent }) {
           </div>
         </div>
 
-        {/* Real MSC Identity Philosophy Section */}
-        <section 
-          id="section-philosophy"
-          style={{
-            padding: '100px 8%',
-            maxWidth: '1440px',
-            margin: '0 auto',
-            opacity: revealedSections.philosophy ? 1 : 0,
-            transform: revealedSections.philosophy ? 'translateY(0)' : 'translateY(30px)',
-            transition: 'opacity 800ms ease, transform 800ms cubic-bezier(0.16, 1, 0.3, 1)'
-          }}
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: '40fr 60fr', gap: '48px', marginBottom: '60px' }} className="philosophy-header">
-            <div>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8B5CF6', letterSpacing: '0.1em', textTransform: 'uppercase' }}>OUR PHILOSOPHY</span>
-              <h2 style={{ fontSize: '38px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111', marginTop: '12px', letterSpacing: '-0.02em', lineHeight: '1.2' }}>GROW BEYOND LIMITS</h2>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <p style={{ fontSize: '15px', color: isDark ? '#A1A1AA' : '#6B7280', lineHeight: '1.7', fontWeight: '400' }}>
-                Microsoft Student Chapter at IGDTUW helps students build key skills through technical guidance, mentorship from seniors, peer programming, and specialized community events.
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }} className="philosophy-grid">
-            {/* Pillars */}
-            {[
-              { num: '01', title: 'DECIDE', desc: 'Find the right direction and opportunities in technology.' },
-              { num: '02', title: 'LEARN', desc: 'Acquire insights through workshops, bootcamps and exclusive events.' },
-              { num: '03', title: 'APPLY', desc: 'Turn conceptual knowledge into practical software products and projects.' }
-            ].map((pillar) => (
-              <div 
-                key={pillar.title} 
-                style={{
-                  backgroundColor: isDark ? '#111116' : '#FFFFFF',
-                  border: isDark ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid #ECEAF5',
-                  borderRadius: '10px',
-                  padding: '40px 32px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                  transition: 'all 300ms ease'
-                }}
-                className="philosophy-card"
-              >
-                <span style={{ fontSize: '32px', fontWeight: '800', color: '#8B5CF6', opacity: 0.8 }}>{pillar.num}</span>
-                <h3 style={{ fontSize: '18px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111', letterSpacing: '-0.01em' }}>{pillar.title}</h3>
-                <p style={{ fontSize: '13.5px', color: isDark ? '#A1A1AA' : '#6B7280', lineHeight: '1.6' }}>{pillar.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Upcoming Events "What's Happening" Section */}
+        {/* 3. UPCOMING EVENTS */}
         <section 
           id="section-happening"
           style={{
             padding: '100px 8%',
-            backgroundColor: isDark ? '#0B0B10' : '#FFFFFF',
-            borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid #ECEAF5',
+            backgroundColor: isDark ? '#08080C' : '#F8F7FF',
             opacity: revealedSections.happening ? 1 : 0,
             transform: revealedSections.happening ? 'translateY(0)' : 'translateY(30px)',
             transition: 'opacity 800ms ease, transform 800ms cubic-bezier(0.16, 1, 0.3, 1)'
@@ -395,7 +414,7 @@ export default function Home({ upcomingEvents, featuredEvent }) {
           </div>
 
           <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
-            {upcomingEvents.length === 0 ? (
+            {activeEvents.length === 0 ? (
               <div style={{ padding: '60px', textAlign: 'center', color: '#9CA3AF' }}>
                 No upcoming events listed at the moment. Check back soon!
               </div>
@@ -405,7 +424,7 @@ export default function Home({ upcomingEvents, featuredEvent }) {
                 gridTemplateColumns: 'repeat(4, 1fr)',
                 gap: '24px'
               }} className="upcoming-events-grid">
-                {upcomingEvents.map(event => (
+                {activeEvents.map(event => (
                   <EventCard key={event._id} event={event} />
                 ))}
               </div>
@@ -413,8 +432,34 @@ export default function Home({ upcomingEvents, featuredEvent }) {
           </div>
         </section>
 
-        {/* Large Featured Event Section */}
-        {featuredEvent && (
+        {/* 4. MSC STATS */}
+        <section 
+          id="section-stats"
+          style={{
+            padding: '80px 8%',
+            backgroundColor: isDark ? '#111116' : '#FFFFFF',
+            borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid #ECEAF5',
+            borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid #ECEAF5',
+            transition: 'all 300ms ease'
+          }}
+        >
+          <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '32px', textAlign: 'center' }} className="stats-grid">
+            {[
+              { label: 'Events Hosted', value: '45+' },
+              { label: 'Student Registrations', value: '1,240+' },
+              { label: 'Technical Mentors', value: '15+' },
+              { label: 'Core Chapters', value: '6+' }
+            ].map((stat, idx) => (
+              <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '40px', fontWeight: '800', color: '#8B5CF6' }}>{stat.value}</span>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: isDark ? '#A1A1AA' : '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 5. FEATURED EVENT */}
+        {activeFeatured && (
           <section 
             id="section-featured"
             style={{
@@ -442,8 +487,8 @@ export default function Home({ upcomingEvents, featuredEvent }) {
               {/* Left Column: Banner */}
               <div style={{ position: 'relative', height: '420px', width: '100%' }}>
                 <img 
-                  src={featuredEvent.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80'} 
-                  alt={featuredEvent.title} 
+                  src={activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80'} 
+                  alt={activeFeatured.title} 
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>
@@ -462,30 +507,30 @@ export default function Home({ upcomingEvents, featuredEvent }) {
                     letterSpacing: '0.05em',
                     textTransform: 'uppercase'
                   }}>
-                    {featuredEvent.category}
+                    {activeFeatured.category}
                   </span>
 
-                  <h3 style={{ fontSize: '28px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111', lineHeight: '1.2' }}>{featuredEvent.title}</h3>
+                  <h3 style={{ fontSize: '28px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111', lineHeight: '1.2' }}>{activeFeatured.title}</h3>
                   
                   <p style={{ fontSize: '14px', color: isDark ? '#A1A1AA' : '#6B7280', lineHeight: '1.7' }}>
-                    {featuredEvent.description}
+                    {activeFeatured.description}
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: isDark ? '#A1A1AA' : '#6B7280' }}>
                       <Calendar size={14} style={{ color: '#8B5CF6' }} />
-                      <span>{formatDate(featuredEvent.date)} • {featuredEvent.time}</span>
+                      <span>{formatDate(activeFeatured.date)} • {activeFeatured.time}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: isDark ? '#A1A1AA' : '#6B7280' }}>
                       <MapPin size={14} style={{ color: '#8B5CF6' }} />
-                      <span>{featuredEvent.venue}</span>
+                      <span>{activeFeatured.venue}</span>
                     </div>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '16px', marginTop: '30px' }}>
                   <a 
-                    href={featuredEvent.registrationLink} 
+                    href={activeFeatured.registrationLink} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     style={{
@@ -500,7 +545,8 @@ export default function Home({ upcomingEvents, featuredEvent }) {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      textDecoration: 'none'
                     }}
                     className="btn-primary-hover"
                   >
@@ -508,7 +554,7 @@ export default function Home({ upcomingEvents, featuredEvent }) {
                     <ExternalLink size={14} />
                   </a>
                   <button 
-                    onClick={() => router.push(`/events/${featuredEvent._id}`)}
+                    onClick={() => router.push(`/events/${activeFeatured._id}`)}
                     style={{
                       height: '46px',
                       padding: '0 20px',
@@ -529,13 +575,110 @@ export default function Home({ upcomingEvents, featuredEvent }) {
           </section>
         )}
 
-        {/* Moments at MSC Gallery Section */}
+        {/* 6. DECIDE • LEARN • APPLY */}
+        <section 
+          id="section-philosophy"
+          style={{
+            padding: '100px 8%',
+            maxWidth: '1440px',
+            margin: '0 auto',
+            opacity: revealedSections.philosophy ? 1 : 0,
+            transform: revealedSections.philosophy ? 'translateY(0)' : 'translateY(30px)',
+            transition: 'opacity 800ms ease, transform 800ms cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '40fr 60fr', gap: '48px', marginBottom: '60px' }} className="philosophy-header">
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8B5CF6', letterSpacing: '0.1em', textTransform: 'uppercase' }}>OUR PHILOSOPHY</span>
+              <h2 style={{ fontSize: '38px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111', marginTop: '12px', letterSpacing: '-0.02em', lineHeight: '1.2' }}>GROW BEYOND LIMITS</h2>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <p style={{ fontSize: '15px', color: isDark ? '#A1A1AA' : '#6B7280', lineHeight: '1.7', fontWeight: '400' }}>
+                Microsoft Student Chapter at IGDTUW helps students build key skills through technical guidance, mentorship from seniors, peer programming, and specialized community events.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }} className="philosophy-grid">
+            {[
+              { num: '01', title: 'DECIDE', desc: 'Find the right direction and opportunities in technology.' },
+              { num: '02', title: 'LEARN', desc: 'Acquire insights through workshops, bootcamps and exclusive events.' },
+              { num: '03', title: 'APPLY', desc: 'Turn conceptual knowledge into practical software products and projects.' }
+            ].map((pillar) => (
+              <div 
+                key={pillar.title} 
+                style={{
+                  backgroundColor: isDark ? '#111116' : '#FFFFFF',
+                  border: isDark ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid #ECEAF5',
+                  borderRadius: '10px',
+                  padding: '40px 32px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  transition: 'all 300ms ease'
+                }}
+                className="philosophy-card"
+              >
+                <span style={{ fontSize: '32px', fontWeight: '800', color: '#8B5CF6', opacity: 0.8 }}>{pillar.num}</span>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111', letterSpacing: '-0.01em' }}>{pillar.title}</h3>
+                <p style={{ fontSize: '13.5px', color: isDark ? '#A1A1AA' : '#6B7280', lineHeight: '1.6' }}>{pillar.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 7. EVENT CATEGORIES */}
+        <section 
+          id="section-categories"
+          style={{
+            padding: '100px 8%',
+            backgroundColor: isDark ? '#111116' : '#FFFFFF',
+            borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid #ECEAF5',
+            borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid #ECEAF5',
+            transition: 'all 300ms ease'
+          }}
+        >
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ marginBottom: '40px', textAlign: 'center' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#8B5CF6', letterSpacing: '0.1em', textTransform: 'uppercase' }}>DEPARTMENTS</span>
+              <h2 style={{ fontSize: '32px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111', marginTop: '12px' }}>EVENT CATEGORIES</h2>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }} className="categories-card-grid">
+              {[
+                { name: 'Workshops', desc: 'Practical development labs on cloud, containers, and core frameworks.' },
+                { name: 'Hackathons', desc: 'Rapid building sprints to iterate prototypes with student teams.' },
+                { name: 'Bootcamps', desc: 'Cohort-based cohorts diving deep into backend/frontend architectures.' },
+                { name: 'Tech Talks', desc: 'Expert seminars and panel discussions with industry professionals.' },
+                { name: 'Competitions', desc: 'Algorithmic challenges, competitive hacking and system designs.' },
+                { name: 'Community', desc: 'Peer-to-peer discussions, open-source panels and student core meetups.' }
+              ].map((cat, idx) => (
+                <div 
+                  key={idx} 
+                  onClick={() => router.push('/events')}
+                  style={{
+                    backgroundColor: isDark ? '#08080C' : '#F8F7FF',
+                    border: isDark ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid #ECEAF5',
+                    borderRadius: '8px',
+                    padding: '28px',
+                    cursor: 'pointer',
+                    transition: 'all 250ms ease'
+                  }}
+                  className="category-box-hover"
+                >
+                  <h4 style={{ fontSize: '16px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111', marginBottom: '8px' }}>{cat.name}</h4>
+                  <p style={{ fontSize: '12.5px', color: isDark ? '#A1A1AA' : '#6B7280', lineHeight: '1.5' }}>{cat.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 8. MSC EVENT MOMENTS / PHOTO GALLERY */}
         <section 
           id="section-gallery"
           style={{
             padding: '100px 8%',
-            backgroundColor: isDark ? '#0B0B10' : '#FFFFFF',
-            borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid #ECEAF5',
+            backgroundColor: isDark ? '#08080C' : '#F8F7FF',
             opacity: revealedSections.gallery ? 1 : 0,
             transform: revealedSections.gallery ? 'translateY(0)' : 'translateY(30px)',
             transition: 'opacity 800ms ease, transform 800ms cubic-bezier(0.16, 1, 0.3, 1)'
@@ -550,26 +693,26 @@ export default function Home({ upcomingEvents, featuredEvent }) {
             <div className="gallery-masonry">
               {[
                 { 
-                  src: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=700&auto=format&fit=crop&q=80',
+                  src: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&auto=format&fit=crop&q=80',
                   title: 'Dev Workshop',
                   tag: 'Workshop 2026',
                   class: 'gallery-item-1'
                 },
                 { 
-                  src: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=700&auto=format&fit=crop&q=80',
-                  title: 'MSC Hackathon',
+                  src: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&auto=format&fit=crop&q=80',
+                  title: 'Imagine Cup Hackathon',
                   tag: 'Hackathon 2025',
                   class: 'gallery-item-2'
                 },
                 { 
-                  src: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=700&auto=format&fit=crop&q=80',
-                  title: 'Tech Panel',
+                  src: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
+                  title: 'MSC Tech Summit',
                   tag: 'Seminar 2026',
                   class: 'gallery-item-3'
                 },
                 { 
-                  src: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&auto=format&fit=crop&q=80',
-                  title: 'Team Meetup',
+                  src: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&auto=format&fit=crop&q=80',
+                  title: 'Student Core Meetup',
                   tag: 'Community 2026',
                   class: 'gallery-item-4'
                 }
@@ -613,6 +756,72 @@ export default function Home({ upcomingEvents, featuredEvent }) {
           </div>
         </section>
 
+        {/* 9. CALL TO ACTION */}
+        <section 
+          id="section-cta"
+          style={{
+            padding: '100px 8%',
+            maxWidth: '1200px',
+            margin: '0 auto'
+          }}
+        >
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(109, 61, 245, 0.08) 0%, rgba(139, 92, 246, 0.03) 100%)',
+            border: isDark ? '1px solid rgba(139, 92, 246, 0.15)' : '1px solid #ECEAF5',
+            borderRadius: '8px',
+            padding: '60px 40px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px'
+          }}>
+            <h2 style={{ fontSize: '32px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111', letterSpacing: '-0.02em' }}>ACCELERATE YOUR LEARNING</h2>
+            <p style={{ fontSize: '14.5px', color: isDark ? '#A1A1AA' : '#6B7280', maxWidth: '600px', lineHeight: '1.7' }}>
+              Connect with fellow developers, build practical projects, and gain guidance from industry professionals. Join Microsoft Student Chapter today.
+            </p>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+              <button 
+                onClick={() => router.push('/events')}
+                style={{
+                  height: '44px',
+                  padding: '0 24px',
+                  backgroundColor: '#6D3DF5',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#FFFFFF',
+                  fontSize: '13.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 14px rgba(109, 61, 245, 0.2)'
+                }}
+              >
+                <span>Explore Events</span>
+                <ArrowRight size={14} />
+              </button>
+              <button 
+                onClick={() => router.push('/contact')}
+                style={{
+                  height: '44px',
+                  padding: '0 24px',
+                  backgroundColor: 'transparent',
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #ECEAF5',
+                  borderRadius: '6px',
+                  color: isDark ? '#FFFFFF' : '#111111',
+                  fontSize: '13.5px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Contact Us
+              </button>
+            </div>
+          </div>
+        </section>
+
       </main>
 
       <Footer />
@@ -627,6 +836,10 @@ export default function Home({ upcomingEvents, featuredEvent }) {
         }
         .philosophy-card:hover {
           transform: translateY(-4px);
+          border-color: ${isDark ? '#8B5CF6' : '#6D3DF5'} !important;
+        }
+        .category-box-hover:hover {
+          transform: translateY(-3px);
           border-color: ${isDark ? '#8B5CF6' : '#6D3DF5'} !important;
         }
         .view-all-events-btn:hover span {
@@ -676,6 +889,13 @@ export default function Home({ upcomingEvents, featuredEvent }) {
           .philosophy-grid {
             grid-template-columns: 1fr !important;
           }
+          .categories-card-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 24px !important;
+          }
         }
         @media (max-width: 768px) {
           .hero-title {
@@ -695,6 +915,12 @@ export default function Home({ upcomingEvents, featuredEvent }) {
           }
           .gallery-card {
             height: 220px !important;
+          }
+          .categories-card-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .stats-grid {
+            grid-template-columns: 1fr !important;
           }
         }
       `}</style>

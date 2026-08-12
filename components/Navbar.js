@@ -53,13 +53,14 @@ export default function Navbar() {
         transition: 'all 300ms ease'
       }}>
         {/* Left Section: Logo */}
-        <div 
-          onClick={() => router.push('/')} 
+        <Link 
+          href="/" 
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            textDecoration: 'none'
           }}
         >
           <Sparkles size={18} style={{ color: isDark ? '#8B5CF6' : '#6D3DF5', transition: 'color 300ms ease' }} />
@@ -72,7 +73,7 @@ export default function Navbar() {
           }}>
             ✦ MSC EVENTS
           </span>
-        </div>
+        </Link>
 
         {/* Center Section: Menu Links */}
         <nav style={{
@@ -117,7 +118,7 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Right Section: Admin button & Theme Toggle */}
+        {/* Right Section: Theme Toggle & Hamburger */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {/* Sun/Moon Switcher */}
           <button
@@ -140,25 +141,6 @@ export default function Navbar() {
             title="Toggle theme"
           >
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-
-          <button 
-            onClick={() => router.push('/admin/login')}
-            className="navbar-admin-btn"
-            style={{
-              height: '38px',
-              backgroundColor: isDark ? 'transparent' : '#FFFFFF',
-              border: isDark ? '1.5px solid #8B5CF6' : '1.5px solid #6D3DF5',
-              borderRadius: '8px',
-              padding: '0 16px',
-              fontSize: '13px',
-              fontWeight: '700',
-              color: isDark ? '#8B5CF6' : '#6D3DF5',
-              cursor: 'pointer',
-              transition: 'all 250ms ease'
-            }}
-          >
-            Admin Login
           </button>
           
           <button 

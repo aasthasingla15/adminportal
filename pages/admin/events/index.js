@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { Search, Plus, Edit2, Trash2, Eye, AlertTriangle, CheckCircle, RefreshCw, Loader2 } from 'lucide-react';
 import AdminLayout from '../../../components/AdminLayout';
+import { getLocalEvents, deleteLocalEvent } from '../../../lib/eventStorage';
 
 export default function AdminEventsListPage() {
   const [events, setEvents] = useState([]);
@@ -10,6 +11,7 @@ export default function AdminEventsListPage() {
   const [activeFilterTab, setActiveFilterTab] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
 
   // Deletion modal states
   const [deletingEventId, setDeletingEventId] = useState(null);
@@ -26,13 +28,22 @@ export default function AdminEventsListPage() {
     try {
       const res = await fetch('/api/events');
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.data) {
         setEvents(data.data);
         setFilteredEvents(data.data);
+        setIsOffline(false);
+      } else {
+        const localEvents = getLocalEvents();
+        setEvents(localEvents);
+        setFilteredEvents(localEvents);
+        setIsOffline(true);
       }
     } catch (err) {
-      console.error(err);
-      showToast('error', 'Failed to retrieve database events.');
+      console.error('Fetch failed, loading localStorage:', err);
+      const localEvents = getLocalEvents();
+      setEvents(localEvents);
+      setFilteredEvents(localEvents);
+      setIsOffline(true);
     } finally {
       setLoading(false);
     }
@@ -89,19 +100,36 @@ export default function AdminEventsListPage() {
     setDeleteLoading(true);
 
     try {
+      if (isOffline || String(deletingEventId).startsWith('mock-') || String(deletingEventId).startsWith('local-')) {
+        deleteLocalEvent(deletingEventId);
+        setEvents((prev) => prev.filter((e) => e._id !== deletingEventId));
+        setDeletingEventId(null);
+        showToast('success', 'Event deleted (local mode).');
+        setDeleteLoading(false);
+        return;
+      }
       const res = await fetch(`/api/events/${deletingEventId}`, { method: 'DELETE' });
       const data = await res.json();
 
       if (data.success) {
+        deleteLocalEvent(deletingEventId);
         showToast('success', 'Event successfully deleted.');
         setDeletingEventId(null);
         fetchEvents();
+      } else if (data.offlineFallback) {
+        deleteLocalEvent(deletingEventId);
+        setEvents((prev) => prev.filter((e) => e._id !== deletingEventId));
+        setDeletingEventId(null);
+        showToast('success', 'Event deleted (local mode — DB offline).');
       } else {
         showToast('error', data.message || 'Failed to delete event.');
       }
     } catch (err) {
       console.error(err);
-      showToast('error', 'Network error occurred during delete.');
+      deleteLocalEvent(deletingEventId);
+      setEvents((prev) => prev.filter((e) => e._id !== deletingEventId));
+      setDeletingEventId(null);
+      showToast('success', 'Event deleted (local mode — network error).');
     } finally {
       setDeleteLoading(false);
     }
