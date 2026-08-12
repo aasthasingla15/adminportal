@@ -207,7 +207,6 @@ export default function EventCard({ event }) {
       `}</style>
     </>
   );
-  );
 }
 
 
