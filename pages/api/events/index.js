@@ -17,7 +17,19 @@ export default async function handler(req, res) {
     case 'GET':
       try {
         await dbConnect();
-        const events = await Event.find({}).sort({ date: 1 });
+        // Return only the fields needed for the Events listing to avoid sending large base64 images
+        const events = await Event.find({}, {
+          title: 1,
+          description: 1,
+          date: 1,
+          time: 1,
+          venue: 1,
+          category: 1,
+          registrationLink: 1,
+          status: 1,
+          featured: 1
+        }).sort({ date: 1 }).lean();
+
         return res.status(200).json({ success: true, data: events });
       } catch (error) {
         console.error('GET /api/events — DB error:', error.message);

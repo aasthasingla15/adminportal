@@ -57,6 +57,7 @@ export default function EventCard({ event }) {
             <img
               src={event.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60'}
               alt={event.title}
+              loading="lazy"
               className="event-card-img"
               style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 400ms ease' }}
             />
