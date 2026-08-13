@@ -5,13 +5,37 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EventCard from '../../components/EventCard';
 import { useTheme } from '../../context/ThemeContext';
+import dbConnect from '../../lib/mongodb';
+import Event from '../../models/Event';
 
-export default function EventsPage() {
-  const [events, setEvents] = useState([]);
-  const [filteredEvents, setFilteredEvents] = useState([]);
+export async function getServerSideProps() {
+  try {
+    await dbConnect();
+    const todayString = new Date().toISOString().split('T')[0];
+    const raw = await Event.find({ status: 'Upcoming', date: { $gte: todayString } }, {
+      title: 1,
+      description: 1,
+      date: 1,
+      time: 1,
+      venue: 1,
+      category: 1,
+      registrationLink: 1,
+      status: 1,
+      featured: 1
+    }).sort({ date: 1 }).lean();
+    return { props: { initialEvents: JSON.parse(JSON.stringify(raw)) } };
+  } catch (err) {
+    console.error('Events getServerSideProps error:', err.message);
+    return { props: { initialEvents: [] } };
+  }
+}
+
+export default function EventsPage({ initialEvents }) {
+  const [events, setEvents] = useState(initialEvents || []);
+  const [filteredEvents, setFilteredEvents] = useState(initialEvents || []);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -47,9 +71,6 @@ export default function EventsPage() {
     }
   };
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
 
   // Filter logic with custom mappings
   useEffect(() => {
