@@ -24,7 +24,13 @@ export default async function handler(req, res) {
     case 'GET':
       try {
         await dbConnect();
-        const event = await Event.findById(id);
+        const includeBanner = !(req.query.includeBanner === '0' || req.query.includeBanner === 'false');
+        let event;
+        if (includeBanner) {
+          event = await Event.findById(id);
+        } else {
+          event = await Event.findById(id).select('-bannerImage').lean();
+        }
         if (!event) {
           return res.status(404).json({ success: false, message: 'Event not found.' });
         }

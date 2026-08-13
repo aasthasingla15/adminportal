@@ -37,12 +37,19 @@ export default function EventDetailPage() {
     let cancelled = false;
     setLoading(true);
     setError('');
-    fetch(`/api/events/${id}`)
+    // First fetch event metadata without the banner to speed up initial render
+    fetch(`/api/events/${id}?includeBanner=0`)
       .then((r) => r.json())
       .then((json) => {
         if (cancelled) return;
         if (json.success && json.data) {
           setEvent(json.data);
+          // Load banner asynchronously (if exists) after metadata renders
+          fetch(`/api/events/${id}?includeBanner=1`).then(r=>r.json()).then(bj=>{
+            if (bj && bj.success && bj.data && bj.data.bannerImage) {
+              setEvent(prev => ({ ...(prev||{}), bannerImage: bj.data.bannerImage }));
+            }
+          }).catch(()=>{});
         } else {
           setError(json.message || 'Unable to load event.');
         }
