@@ -1,6 +1,86 @@
 # MSC Events — Admin Portal
 
-A full-stack event management application for the Microsoft Student Chapter (MSC) at IGDTUW. Administrators manage events through a protected Admin Portal; public users can browse upcoming events and follow external registration links.
+Simple instructions to run this project, the assumptions made during development, and the features implemented.
+
+---
+
+## Quick Setup
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/aasthasingla15/adminportal.git
+cd adminportal
+npm install
+```
+
+2. Create environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` and set at minimum:
+
+- `MONGODB_URI` — your MongoDB connection string
+- `ADMIN_USERNAME` and `ADMIN_PASSWORD` — admin credentials
+
+3. Run locally:
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000
+
+4. Build for production:
+
+```bash
+npm run build
+npm start
+```
+
+---
+
+## Assumptions (simple wording)
+
+- MongoDB is the only source of truth for event data.
+- Admin authentication is session-cookie based (HTTP-only cookie named `admin_session`).
+- Banner images may be stored as base64 or remote URLs; list API avoids returning large image blobs.
+- Deployment target is Vercel or similar serverless host with access to the MongoDB instance.
+
+---
+
+## Features Implemented (easy wording)
+
+- Public pages: Home, Events list, Event details, About, Contact.
+- Admin Portal: Login, Dashboard, Create/Edit/Delete events.
+- Events are stored and retrieved from MongoDB via Next.js API routes.
+- Image upload supported (Cloudinary optional); event detail pages show full banners.
+- Event list optimized: the listing API returns only small fields (no large image blobs), and event card images lazy-load.
+- Client-side search and category filtering operate on the loaded event list (no extra API calls per keystroke).
+- External registration links open in a new tab (safe attributes applied).
+- Admin routes protected; public pages do not require authentication.
+
+---
+
+## How things are organized (short)
+
+- `pages/` — Next.js pages and API routes.
+- `components/` — React components used by pages.
+- `lib/` — helpers (MongoDB connection, etc.).
+- `models/` — Mongoose schemas.
+
+---
+
+## Notes & Next Steps (optional)
+
+- For best performance, store thumbnails or use a cloud image service (Cloudinary) and return thumbnail URLs in the events list.
+- To include event cards in the initial HTML for SEO, consider server-side rendering the events list (getServerSideProps). Currently the listing fetches client-side and shows skeletons while loading.
+
+---
+
+If you'd like, I can: add thumbnails (Cloudinary), convert the events list to SSR, or run a production timing report.
 
 ---
 
