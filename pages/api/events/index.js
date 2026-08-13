@@ -1,24 +1,5 @@
-import fs from 'fs';
-import path from 'path';
 import dbConnect from '../../../lib/mongodb';
 import Event from '../../../models/Event';
-
-// Auto-migrate the video asset from root to public/videos/hero.mp4
-try {
-  const rootVideoPath = path.join(process.cwd(), 'WhatsApp Video 2026-08-11 at 18.00.44.mp4');
-  const targetDir = path.join(process.cwd(), 'public', 'videos');
-  const targetVideoPath = path.join(targetDir, 'hero.mp4');
-  
-  if (fs.existsSync(rootVideoPath)) {
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
-    }
-    fs.copyFileSync(rootVideoPath, targetVideoPath);
-    console.log('Video asset successfully deployed to public/videos/hero.mp4');
-  }
-} catch (err) {
-  console.error('Failed to deploy video asset:', err);
-}
 
 // Configure body parser limit for image uploads (base64)
 export const config = {
@@ -32,19 +13,19 @@ export const config = {
 export default async function handler(req, res) {
   const { method } = req;
 
-  await dbConnect();
-
   switch (method) {
     case 'GET':
       try {
         await dbConnect();
         const events = await Event.find({}).sort({ date: 1 });
-        res.status(200).json({ success: true, data: events });
+        return res.status(200).json({ success: true, data: events });
       } catch (error) {
-        console.error('Database connection failed in GET, triggering offlineFallback:', error);
-        res.status(200).json({ success: false, offlineFallback: true, message: error.message });
+        console.error('GET /api/events — DB error:', error.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Unable to load events. Please try again.'
+        });
       }
-      break;
 
     case 'POST':
       // Authenticate admin session
@@ -55,20 +36,56 @@ export default async function handler(req, res) {
 
       try {
         await dbConnect();
-        if (req.body.featured === true) {
+
+        const { title, description, date, time, venue, category, bannerImage, registrationLink, status, featured } = req.body;
+
+        // Server-side validation
+        if (!title || !title.trim()) {
+          return res.status(400).json({ success: false, message: 'Event Title is required.' });
+        }
+        if (!description || !description.trim()) {
+          return res.status(400).json({ success: false, message: 'Event Description is required.' });
+        }
+        if (!date || !date.trim()) {
+          return res.status(400).json({ success: false, message: 'Event Date is required.' });
+        }
+        if (!time || !time.trim()) {
+          return res.status(400).json({ success: false, message: 'Event Time is required.' });
+        }
+        if (!venue || !venue.trim()) {
+          return res.status(400).json({ success: false, message: 'Event Venue is required.' });
+        }
+        if (!category) {
+          return res.status(400).json({ success: false, message: 'Event Category is required.' });
+        }
+        if (!bannerImage) {
+          return res.status(400).json({ success: false, message: 'Banner image is required.' });
+        }
+        if (!registrationLink || !registrationLink.trim()) {
+          return res.status(400).json({ success: false, message: 'Registration Link is required.' });
+        }
+
+        // If featured, unset all others first
+        if (featured === true) {
           await Event.updateMany({}, { featured: false });
         }
+
         const event = await Event.create(req.body);
-        res.status(201).json({ success: true, data: event });
+        return res.status(201).json({ success: true, data: event });
       } catch (error) {
-        console.error('Database connection failed in POST, triggering offlineFallback:', error);
-        res.status(200).json({ success: false, offlineFallback: true, message: error.message });
+        console.error('POST /api/events — DB error:', error.message);
+        if (error.name === 'ValidationError') {
+          const messages = Object.values(error.errors).map(e => e.message).join(', ');
+          return res.status(400).json({ success: false, message: messages });
+        }
+        return res.status(500).json({
+          success: false,
+          message: 'Unable to create event. Please try again.'
+        });
       }
-      break;
 
     default:
       res.setHeader('Allow', ['GET', 'POST']);
-      res.status(455).end(`Method ${method} Not Allowed`);
-      break;
+      return res.status(405).end(`Method ${method} Not Allowed`);
   }
 }

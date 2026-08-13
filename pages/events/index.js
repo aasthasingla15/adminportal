@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { Search, Info, RefreshCw } from 'lucide-react';
+import { Search, Info, RefreshCw, AlertTriangle } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EventCard from '../../components/EventCard';
 import { useTheme } from '../../context/ThemeContext';
-import { getLocalEvents } from '../../lib/eventStorage';
 
 export default function EventsPage() {
   const [events, setEvents] = useState([]);
@@ -13,42 +12,42 @@ export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  // Fetch events
-  useEffect(() => {
-    async function fetchEvents() {
-      setLoading(true);
-      try {
-        const res = await fetch('/api/events');
-        const data = await res.json();
-        
-        if (data.success && data.data && data.data.length > 0) {
-          const todayString = new Date().toISOString().split('T')[0];
-          const upcomingOnly = data.data.filter(e => e.status === 'Upcoming' && e.date >= todayString);
-          setEvents(upcomingOnly);
-          setFilteredEvents(upcomingOnly);
-        } else {
-          const localEvents = getLocalEvents();
-          const todayString = new Date().toISOString().split('T')[0];
-          const upcomingOnly = localEvents.filter(e => e.status === 'Upcoming' && e.date >= todayString);
-          setEvents(upcomingOnly);
-          setFilteredEvents(upcomingOnly);
-        }
-      } catch (err) {
-        console.error('Failed to retrieve events, loading fallback:', err);
-        const localEvents = getLocalEvents();
+  // Fetch events from MongoDB via API — single source of truth
+  const fetchEvents = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/events', { cache: 'no-store' });
+      const data = await res.json();
+
+      if (data.success && data.data) {
         const todayString = new Date().toISOString().split('T')[0];
-        const upcomingOnly = localEvents.filter(e => e.status === 'Upcoming' && e.date >= todayString);
+        const upcomingOnly = data.data.filter(e => e.status === 'Upcoming' && e.date >= todayString);
         setEvents(upcomingOnly);
         setFilteredEvents(upcomingOnly);
-      } finally {
-        setLoading(false);
+      } else {
+        // API responded but with an error — show it, do NOT use localStorage
+        setError(data.message || 'Unable to load events. Please try again.');
+        setEvents([]);
+        setFilteredEvents([]);
       }
+    } catch (err) {
+      console.error('fetchEvents error:', err);
+      setError('Unable to load events. Please try again.');
+      setEvents([]);
+      setFilteredEvents([]);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchEvents();
   }, []);
 
@@ -59,7 +58,7 @@ export default function EventsPage() {
     // Filter by search query
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
-      result = result.filter(e => 
+      result = result.filter(e =>
         e.title.toLowerCase().includes(q) ||
         e.description.toLowerCase().includes(q) ||
         e.venue.toLowerCase().includes(q)
@@ -83,7 +82,7 @@ export default function EventsPage() {
     }
 
     setFilteredEvents(result);
-    setCurrentPage(1); // Reset to page 1 on filter/search change
+    setCurrentPage(1);
   }, [searchQuery, categoryFilter, events]);
 
   const clearFilters = () => {
@@ -100,10 +99,10 @@ export default function EventsPage() {
   const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
 
   return (
-    <div style={{ 
-      backgroundColor: isDark ? '#08080C' : '#F8F7FF', 
-      minHeight: '100vh', 
-      display: 'flex', 
+    <div style={{
+      backgroundColor: isDark ? '#08080C' : '#F8F7FF',
+      minHeight: '100vh',
+      display: 'flex',
       flexDirection: 'column',
       transition: 'background-color 300ms ease, color 300ms ease',
       position: 'relative'
@@ -145,7 +144,6 @@ export default function EventsPage() {
           gap: '20px',
           marginBottom: '48px'
         }}>
-          
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -153,8 +151,8 @@ export default function EventsPage() {
             gap: '16px',
             flexWrap: 'wrap'
           }} className="filters-search-row">
-            
-            {/* Category Filter Buttons (Horizontal list) */}
+
+            {/* Category Filter Buttons */}
             <div style={{
               display: 'flex',
               gap: '8px',
@@ -173,8 +171,8 @@ export default function EventsPage() {
                       fontSize: '13px',
                       fontWeight: '700',
                       border: isActive ? 'none' : (isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #ECEAF5'),
-                      backgroundColor: isActive 
-                        ? '#6D3DF5' 
+                      backgroundColor: isActive
+                        ? '#6D3DF5'
                         : (isDark ? '#111116' : '#FFFFFF'),
                       color: isActive ? '#FFFFFF' : (isDark ? '#A1A1AA' : '#6B7280'),
                       cursor: 'pointer',
@@ -224,7 +222,7 @@ export default function EventsPage() {
           </div>
         </div>
 
-        {/* Event Grid & Loader */}
+        {/* Loading State */}
         {loading ? (
           <div className="event-grid-container">
             {[1, 2, 3, 4].map((i) => (
@@ -252,8 +250,9 @@ export default function EventsPage() {
               </div>
             ))}
           </div>
-        ) : filteredEvents.length === 0 ? (
-          /* Empty state block */
+
+        ) : error ? (
+          /* Error State — no mock events, no fake data */
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -264,16 +263,15 @@ export default function EventsPage() {
             border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #ECEAF5',
             borderRadius: '10px',
             textAlign: 'center',
-            gap: '16px',
-            transition: 'all 300ms ease'
+            gap: '16px'
           }}>
-            <Info size={36} style={{ color: '#9CA3AF' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111' }}>No events found</h3>
+            <AlertTriangle size={36} style={{ color: '#EF4444' }} />
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111' }}>Unable to load events</h3>
             <p style={{ fontSize: '13px', color: isDark ? '#A1A1AA' : '#6B7280', maxWidth: '300px' }}>
-              We couldn't find any events matching your search query or filter.
+              {error}
             </p>
-            <button 
-              onClick={clearFilters}
+            <button
+              onClick={fetchEvents}
               style={{
                 height: '38px',
                 padding: '0 16px',
@@ -290,9 +288,58 @@ export default function EventsPage() {
               }}
             >
               <RefreshCw size={13} />
-              <span>Clear Filters</span>
+              <span>Try Again</span>
             </button>
           </div>
+
+        ) : filteredEvents.length === 0 ? (
+          /* Empty state — MongoDB has no upcoming events */
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '80px 24px',
+            backgroundColor: isDark ? '#111116' : '#FFFFFF',
+            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #ECEAF5',
+            borderRadius: '10px',
+            textAlign: 'center',
+            gap: '16px',
+            transition: 'all 300ms ease'
+          }}>
+            <Info size={36} style={{ color: '#9CA3AF' }} />
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111' }}>
+              {searchQuery || categoryFilter !== 'All' ? 'No events found' : 'No upcoming events at the moment'}
+            </h3>
+            <p style={{ fontSize: '13px', color: isDark ? '#A1A1AA' : '#6B7280', maxWidth: '300px' }}>
+              {searchQuery || categoryFilter !== 'All'
+                ? "We couldn't find any events matching your search query or filter."
+                : 'Check back soon for upcoming events organized by the MSC society.'}
+            </p>
+            {(searchQuery || categoryFilter !== 'All') && (
+              <button
+                onClick={clearFilters}
+                style={{
+                  height: '38px',
+                  padding: '0 16px',
+                  backgroundColor: '#6D3DF5',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <RefreshCw size={13} />
+                <span>Clear Filters</span>
+              </button>
+            )}
+          </div>
+
         ) : (
           <>
             <div className="event-grid-container">
@@ -378,5 +425,3 @@ export default function EventsPage() {
     </div>
   );
 }
-
-
