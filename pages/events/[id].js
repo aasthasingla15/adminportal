@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { Calendar, MapPin, Tag, ArrowUpRight, ArrowLeft, Clock } from 'lucide-react';
@@ -7,81 +6,16 @@ import Event from '../../models/Event';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useTheme } from '../../context/ThemeContext';
-import { getLocalEvents } from '../../lib/eventStorage';
 
 export async function getServerSideProps(context) {
   const { id } = context.params;
-
-  const mockEvents = [
-    {
-      _id: 'mock-1',
-      title: 'Azure Cloud Dev Summit',
-      description: 'Deep dive into cloud native architectures, serverless computing, and hands-on deployment with Microsoft Azure.',
-      date: '2026-09-18',
-      time: '10:00 AM',
-      venue: 'Auditorium 1, IGDTUW',
-      category: 'Workshop',
-      bannerImage: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&auto=format&fit=crop&q=80',
-      registrationLink: 'https://mscigdtuw.vercel.app/',
-      status: 'Upcoming',
-      featured: true
-    },
-    {
-      _id: 'mock-2',
-      title: 'Imagine Cup Hackathon',
-      description: 'The premier student technology competition. Build prototypes, solve global challenges, and win mentorship from Microsoft experts.',
-      date: '2026-09-22',
-      time: '09:00 AM',
-      venue: 'Tech Hall, IGDTUW',
-      category: 'Hackathon',
-      bannerImage: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&auto=format&fit=crop&q=80',
-      registrationLink: 'https://mscigdtuw.vercel.app/',
-      status: 'Upcoming',
-      featured: false
-    },
-    {
-      _id: 'mock-3',
-      title: 'AI/ML Innovation Bootcamp',
-      description: 'Comprehensive bootcamp on modern machine learning techniques, neural networks, and model deployment.',
-      date: '2026-09-28',
-      time: '11:00 AM',
-      venue: 'Lab 3, IGDTUW',
-      category: 'Bootcamp',
-      bannerImage: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80',
-      registrationLink: 'https://mscigdtuw.vercel.app/',
-      status: 'Upcoming',
-      featured: false
-    },
-    {
-      _id: 'mock-4',
-      title: 'Algorithmic Coding Showdown',
-      description: 'Showcase your competitive programming skills in this intense multi-round algorithm sprint.',
-      date: '2026-10-05',
-      time: '02:00 PM',
-      venue: 'CS Department, IGDTUW',
-      category: 'Competition',
-      bannerImage: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=800&auto=format&fit=crop&q=80',
-      registrationLink: 'https://mscigdtuw.vercel.app/',
-      status: 'Upcoming',
-      featured: false
-    }
-  ];
-
-  if (String(id).startsWith('mock-') || String(id).startsWith('local-')) {
-    const foundMock = mockEvents.find(e => e._id === id);
-    if (foundMock) {
-      return { props: { event: foundMock } };
-    }
-    // Return empty shell so client-side component can fetch it from localStorage
-    return { props: { event: { _id: id, title: '', description: '', date: '', time: '', venue: '', category: 'Workshop', bannerImage: '', registrationLink: '', status: 'Upcoming', featured: false } } };
-  }
 
   try {
     await dbConnect();
     const event = await Event.findById(id);
     if (!event) {
-      const foundMock = mockEvents.find(e => e._id === id) || mockEvents[0];
-      return { props: { event: foundMock } };
+      // Event not in MongoDB — show proper 404
+      return { notFound: true };
     }
     return {
       props: {
@@ -89,32 +23,15 @@ export async function getServerSideProps(context) {
       }
     };
   } catch (err) {
-    console.error('Fetch event props error, loading mock fallback:', err);
-    const foundMock = mockEvents.find(e => e._id === id) || mockEvents[0];
-    return {
-      props: {
-        event: foundMock
-      }
-    };
+    console.error('Event detail getServerSideProps error:', err.message);
+    // DB failure — show 404 rather than mock data
+    return { notFound: true };
   }
 }
 
-export default function EventDetailPage({ event: initialEvent }) {
+export default function EventDetailPage({ event }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const [event, setEvent] = useState(initialEvent);
-
-  useEffect(() => {
-    if (String(initialEvent._id).startsWith('mock-') || String(initialEvent._id).startsWith('local-')) {
-      const localEvents = getLocalEvents();
-      const found = localEvents.find(e => e._id === initialEvent._id);
-      if (found) {
-        setEvent(found);
-      }
-    } else {
-      setEvent(initialEvent);
-    }
-  }, [initialEvent]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -132,23 +49,23 @@ export default function EventDetailPage({ event: initialEvent }) {
   };
 
   return (
-    <div style={{ 
-      backgroundColor: isDark ? '#08080C' : '#F8F7FF', 
-      minHeight: '100vh', 
-      display: 'flex', 
+    <div style={{
+      backgroundColor: isDark ? '#08080C' : '#F8F7FF',
+      minHeight: '100vh',
+      display: 'flex',
       flexDirection: 'column',
       transition: 'background-color 300ms ease, color 300ms ease',
       position: 'relative'
     }}>
       <Head>
         <title>{event.title} | MSC Events</title>
-        <meta name="description" content={event.description.slice(0, 150)} />
+        <meta name="description" content={event.description ? event.description.slice(0, 150) : ''} />
       </Head>
 
       <Navbar />
 
       <main style={{ flex: 1, marginTop: '72px', zIndex: 10 }}>
-        
+
         {/* Large Banner Top */}
         <div style={{
           width: '100%',
@@ -157,9 +74,9 @@ export default function EventDetailPage({ event: initialEvent }) {
           backgroundColor: '#08080C',
           borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #ECEAF5'
         }} className="detail-banner-box">
-          <img 
-            src={event.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80'} 
-            alt={event.title} 
+          <img
+            src={event.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80'}
+            alt={event.title}
             style={{
               width: '100%',
               height: '100%',
@@ -182,7 +99,6 @@ export default function EventDetailPage({ event: initialEvent }) {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            boxShadow: 'none',
             cursor: 'pointer',
             transition: 'all 200ms ease'
           }}>
@@ -200,7 +116,7 @@ export default function EventDetailPage({ event: initialEvent }) {
           gridTemplateColumns: '60fr 40fr',
           gap: '48px'
         }} className="detail-layout-grid">
-          
+
           {/* Left Column: Title + Description */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Category badge */}
@@ -218,7 +134,7 @@ export default function EventDetailPage({ event: initialEvent }) {
             }}>
               {event.category}
             </span>
-            
+
             <h1 style={{
               fontSize: '36px',
               fontWeight: '800',
@@ -253,7 +169,6 @@ export default function EventDetailPage({ event: initialEvent }) {
               border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #ECEAF5',
               borderRadius: '8px',
               padding: '28px',
-              boxShadow: 'none',
               position: 'sticky',
               top: '110px',
               display: 'flex',
@@ -262,18 +177,18 @@ export default function EventDetailPage({ event: initialEvent }) {
               transition: 'all 300ms ease'
             }}>
               <h3 style={{ fontSize: '16px', fontWeight: '800', color: isDark ? '#FFFFFF' : '#111111' }}>Event Details</h3>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ 
-                    width: '36px', 
-                    height: '36px', 
-                    borderRadius: '6px', 
-                    backgroundColor: isDark ? 'rgba(139, 92, 246, 0.12)' : '#F0EDFF', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    color: isDark ? '#A78BFA' : '#6D3DF5' 
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '6px',
+                    backgroundColor: isDark ? 'rgba(139, 92, 246, 0.12)' : '#F0EDFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: isDark ? '#A78BFA' : '#6D3DF5'
                   }}>
                     <Calendar size={16} />
                   </div>
@@ -284,15 +199,15 @@ export default function EventDetailPage({ event: initialEvent }) {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ 
-                    width: '36px', 
-                    height: '36px', 
-                    borderRadius: '6px', 
-                    backgroundColor: isDark ? 'rgba(139, 92, 246, 0.12)' : '#F0EDFF', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    color: isDark ? '#A78BFA' : '#6D3DF5' 
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '6px',
+                    backgroundColor: isDark ? 'rgba(139, 92, 246, 0.12)' : '#F0EDFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: isDark ? '#A78BFA' : '#6D3DF5'
                   }}>
                     <Clock size={16} />
                   </div>
@@ -303,15 +218,15 @@ export default function EventDetailPage({ event: initialEvent }) {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ 
-                    width: '36px', 
-                    height: '36px', 
-                    borderRadius: '6px', 
-                    backgroundColor: isDark ? 'rgba(139, 92, 246, 0.12)' : '#F0EDFF', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    color: isDark ? '#A78BFA' : '#6D3DF5' 
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '6px',
+                    backgroundColor: isDark ? 'rgba(139, 92, 246, 0.12)' : '#F0EDFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: isDark ? '#A78BFA' : '#6D3DF5'
                   }}>
                     <MapPin size={16} />
                   </div>
@@ -322,15 +237,15 @@ export default function EventDetailPage({ event: initialEvent }) {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ 
-                    width: '36px', 
-                    height: '36px', 
-                    borderRadius: '6px', 
-                    backgroundColor: isDark ? 'rgba(139, 92, 246, 0.12)' : '#F0EDFF', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    color: isDark ? '#A78BFA' : '#6D3DF5' 
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '6px',
+                    backgroundColor: isDark ? 'rgba(139, 92, 246, 0.12)' : '#F0EDFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: isDark ? '#A78BFA' : '#6D3DF5'
                   }}>
                     <Tag size={16} />
                   </div>
@@ -342,10 +257,10 @@ export default function EventDetailPage({ event: initialEvent }) {
               </div>
 
               {/* Action Button */}
-              <a 
-                href={event.registrationLink} 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <a
+                href={event.registrationLink}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   height: '46px',
                   background: 'linear-gradient(135deg, #6D3DF5 0%, #8B5CF6 100%)',
@@ -392,5 +307,3 @@ export default function EventDetailPage({ event: initialEvent }) {
     </div>
   );
 }
-
-

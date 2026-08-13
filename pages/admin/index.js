@@ -5,33 +5,29 @@ import {
   FileText, Calendar as CalendarIcon, Layers, Radio, Plus, Eye, Edit2, Trash2, Loader2
 } from 'lucide-react';
 import AdminLayout from '../../components/AdminLayout';
-import { getLocalEvents, deleteLocalEvent } from '../../lib/eventStorage';
 
 export default function AdminDashboardOverview() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isOffline, setIsOffline] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   const fetchEvents = async () => {
     setLoading(true);
+    setError('');
     try {
-      const res = await fetch('/api/events');
+      const res = await fetch('/api/events', { cache: 'no-store' });
       const data = await res.json();
       if (data.success && data.data) {
         setEvents(data.data);
-        setIsOffline(false);
       } else {
-        // DB offline or empty — load from localStorage
-        const localEvents = getLocalEvents();
-        setEvents(localEvents);
-        setIsOffline(true);
+        setEvents([]);
+        setError(data.message || 'Unable to load events. Please try again.');
       }
     } catch (err) {
-      console.error('Fetch failed, loading from localStorage:', err);
-      const localEvents = getLocalEvents();
-      setEvents(localEvents);
-      setIsOffline(true);
+      console.error('Fetch failed:', err);
+      setError('Unable to load events. Please try again.');
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -42,34 +38,23 @@ export default function AdminDashboardOverview() {
   }, []);
 
   const handleDelete = async (id, title) => {
-    if (confirm(`Are you sure you want to delete "${title}"?`)) {
-      try {
-        if (isOffline || String(id).startsWith('mock-') || String(id).startsWith('local-')) {
-          // Offline mode: delete from localStorage only
-          deleteLocalEvent(id);
-          setEvents((prev) => prev.filter((e) => e._id !== id));
-          alert('Event deleted successfully (local mode).');
-          return;
-        }
-        const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) {
-          deleteLocalEvent(id); // Keep localStorage in sync too
-          setEvents((prev) => prev.filter((e) => e._id !== id));
-          alert('Event deleted successfully.');
-        } else if (data.offlineFallback) {
-          deleteLocalEvent(id);
-          setEvents((prev) => prev.filter((e) => e._id !== id));
-          alert('Event deleted (local mode — DB offline).');
-        } else {
-          alert('Failed to delete event: ' + data.message);
-        }
-      } catch (err) {
-        console.error(err);
-        deleteLocalEvent(id);
-        setEvents((prev) => prev.filter((e) => e._id !== id));
-        alert('Event deleted (local mode — connection error).');
+    if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        // Refetch authoritative list from MongoDB
+        await fetchEvents();
+        alert('Event deleted successfully.');
+      } else {
+        alert('Failed to delete event: ' + (data.message || 'Please try again.'));
       }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Unable to delete event. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 

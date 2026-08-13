@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { FileText, Calendar, MapPin, Tag, Link as LinkIcon, ImageIcon, Loader2, ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ImageIcon, Loader2, ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react';
 import AdminLayout from '../../../components/AdminLayout';
 import LiveEventCardPreview from '../../../components/EventCard';
-import { saveLocalEvent } from '../../../lib/eventStorage';
 
 export default function AdminCreateEventPage() {
   const [title, setTitle] = useState('');
@@ -53,7 +52,7 @@ export default function AdminCreateEventPage() {
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
     if (cloudName && uploadPreset) {
-      showToast('info', 'Uploading image to Cloudinary...');
+      showToast('success', 'Uploading image to Cloudinary...');
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -71,7 +70,7 @@ export default function AdminCreateEventPage() {
         }
       } catch (err) {
         console.error('Cloudinary error:', err);
-        showToast('error', 'Cloudinary upload failed, falling back to local storage...');
+        showToast('error', 'Cloudinary upload failed. Using base64 instead.');
         readBase64(file);
       }
     } else {
@@ -97,7 +96,7 @@ export default function AdminCreateEventPage() {
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
     if (cloudName && uploadPreset) {
-      showToast('info', 'Uploading image to Cloudinary...');
+      showToast('success', 'Uploading image to Cloudinary...');
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -115,7 +114,7 @@ export default function AdminCreateEventPage() {
         }
       } catch (err) {
         console.error('Cloudinary error:', err);
-        showToast('error', 'Cloudinary upload failed, falling back to local storage...');
+        showToast('error', 'Cloudinary upload failed. Using base64 instead.');
         readBase64(file);
       }
     } else {
@@ -127,6 +126,7 @@ export default function AdminCreateEventPage() {
     e.preventDefault();
     setError('');
 
+    // Client-side validation
     if (!title.trim()) return setError('Event Title is required.');
     if (!description.trim()) return setError('Event Description is required.');
     if (!date.trim()) return setError('Event Date is required.');
@@ -135,11 +135,11 @@ export default function AdminCreateEventPage() {
     if (!bannerImage) return setError('Please upload an event banner.');
     if (!registrationLink.trim()) return setError('Registration Link is required.');
 
-    // URL Check
+    // URL check
     try {
       new URL(registrationLink);
     } catch (_) {
-      if (!/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/.test(registrationLink)) {
+      if (!/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\\/\w .-]*)*\/?$/.test(registrationLink)) {
         return setError('Please enter a valid URL.');
       }
     }
@@ -154,30 +154,19 @@ export default function AdminCreateEventPage() {
         body: JSON.stringify(payload)
       });
       const data = await res.json();
+
       if (data.success) {
-        saveLocalEvent({ ...payload, _id: data.data?._id || `local-${Date.now()}` });
         showToast('success', 'Event created successfully!');
         setTimeout(() => {
           router.push('/admin/events');
         }, 1000);
-      } else if (data.offlineFallback) {
-        // DB offline — save to localStorage so public site shows it
-        saveLocalEvent(payload);
-        showToast('success', 'Event saved locally (DB offline). Visible on public site!');
-        setTimeout(() => {
-          router.push('/admin/events');
-        }, 1500);
       } else {
-        setError(data.message || 'Failed to create event.');
+        // Show the server error — do NOT fall back to localStorage
+        setError(data.message || 'Unable to create event. Please try again.');
       }
     } catch (err) {
-      console.error(err);
-      // Network error — save to localStorage
-      saveLocalEvent(payload);
-      showToast('success', 'Event saved locally (network error). Visible on public site!');
-      setTimeout(() => {
-        router.push('/admin/events');
-      }, 1500);
+      console.error('Create event error:', err);
+      setError('Unable to create event. Please check your connection and try again.');
     } finally {
       setSaving(false);
     }
@@ -201,7 +190,7 @@ export default function AdminCreateEventPage() {
   return (
     <AdminLayout pageTitle="Create Event">
       {/* Back button */}
-      <button 
+      <button
         onClick={() => router.push('/admin/events')}
         style={{
           border: 'none',
@@ -220,14 +209,14 @@ export default function AdminCreateEventPage() {
         <span>Back to Events</span>
       </button>
 
-      {/* Grid Layout Section 16 */}
+      {/* Grid Layout */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '60fr 40fr',
         gap: '40px',
         alignItems: 'start'
       }} className="create-grid">
-        
+
         {/* Left Column: Input Form Card */}
         <form onSubmit={handleSubmit} style={{
           backgroundColor: '#FFFFFF',
@@ -240,7 +229,7 @@ export default function AdminCreateEventPage() {
           gap: '20px'
         }}>
           <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#111111' }}>New Event Details</h3>
-          
+
           {error && (
             <div style={{
               backgroundColor: 'rgba(239, 68, 68, 0.05)',
@@ -262,8 +251,8 @@ export default function AdminCreateEventPage() {
           {/* Title */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '13px', fontWeight: '700', color: '#111111' }}>Event Title <span style={{ color: '#EF4444' }}>*</span></label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="e.g. Web Development Workshop"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -285,7 +274,7 @@ export default function AdminCreateEventPage() {
           {/* Description */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '13px', fontWeight: '700', color: '#111111' }}>Description <span style={{ color: '#EF4444' }}>*</span></label>
-            <textarea 
+            <textarea
               placeholder="Describe your event details..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -309,7 +298,7 @@ export default function AdminCreateEventPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }} className="form-row-2">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '13px', fontWeight: '700', color: '#111111' }}>Date <span style={{ color: '#EF4444' }}>*</span></label>
-              <input 
+              <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
@@ -330,7 +319,7 @@ export default function AdminCreateEventPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '13px', fontWeight: '700', color: '#111111' }}>Time <span style={{ color: '#EF4444' }}>*</span></label>
-              <input 
+              <input
                 type="text"
                 placeholder="e.g. 10:00 AM"
                 value={time}
@@ -355,7 +344,7 @@ export default function AdminCreateEventPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }} className="form-row-2">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '13px', fontWeight: '700', color: '#111111' }}>Venue <span style={{ color: '#EF4444' }}>*</span></label>
-              <input 
+              <input
                 type="text"
                 placeholder="e.g. IGDTUW, Delhi"
                 value={venue}
@@ -430,7 +419,7 @@ export default function AdminCreateEventPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '13px', fontWeight: '700', color: '#111111' }}>Registration Link <span style={{ color: '#EF4444' }}>*</span></label>
-              <input 
+              <input
                 type="text"
                 placeholder="https://example.com/register"
                 value={registrationLink}
@@ -463,7 +452,7 @@ export default function AdminCreateEventPage() {
             marginTop: '4px',
             marginBottom: '4px'
           }}>
-            <input 
+            <input
               type="checkbox"
               id="featured-checkbox"
               checked={featured}
@@ -483,7 +472,7 @@ export default function AdminCreateEventPage() {
           {/* Image upload dropzone */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '13px', fontWeight: '700', color: '#111111' }}>Banner Image <span style={{ color: '#EF4444' }}>*</span></label>
-            <div 
+            <div
               onDragOver={handleDragOver}
               onDrop={handleDrop}
               onClick={() => document.getElementById('event-banner-uploader').click()}
@@ -504,7 +493,7 @@ export default function AdminCreateEventPage() {
               }}
               className="dropzone-area"
             >
-              <input 
+              <input
                 id="event-banner-uploader"
                 type="file"
                 accept="image/*"
@@ -528,7 +517,7 @@ export default function AdminCreateEventPage() {
 
           {/* Action buttons */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-            <button 
+            <button
               type="button"
               onClick={() => router.push('/admin/events')}
               style={{
@@ -547,7 +536,7 @@ export default function AdminCreateEventPage() {
             >
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
               disabled={saving}
               style={{
@@ -559,18 +548,19 @@ export default function AdminCreateEventPage() {
                 fontSize: '13.5px',
                 fontWeight: '600',
                 color: '#FFFFFF',
-                cursor: 'pointer',
+                cursor: saving ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 boxShadow: '0 4px 10px rgba(108, 59, 255, 0.15)',
-                transition: 'opacity 250ms ease'
+                transition: 'opacity 250ms ease',
+                opacity: saving ? 0.7 : 1
               }}
               className="btn-submit-style"
             >
               {saving ? (
                 <>
-                  <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
+                  <Loader2 size={15} className="animate-spin" />
                   <span>Creating...</span>
                 </>
               ) : (
@@ -594,8 +584,8 @@ export default function AdminCreateEventPage() {
       {/* Toast Alert Popups */}
       <div style={{ position: 'fixed', bottom: '24px', right: '24px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 3000 }}>
         {toasts.map(toast => (
-          <div 
-            key={toast.id} 
+          <div
+            key={toast.id}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -632,6 +622,13 @@ export default function AdminCreateEventPage() {
         }
         .btn-submit-style:hover {
           opacity: 0.95;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
         }
         @media (max-width: 1024px) {
           .create-grid {

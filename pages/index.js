@@ -8,7 +8,6 @@ import EventCard from '../components/EventCard';
 import { useTheme } from '../context/ThemeContext';
 import dbConnect from '../lib/mongodb';
 import Event from '../models/Event';
-import { getLocalEvents } from '../lib/eventStorage';
 
 export async function getServerSideProps() {
   try {
@@ -36,66 +35,13 @@ export async function getServerSideProps() {
       }
     };
   } catch (err) {
-    console.error('Fetch home props error, falling back to mock events:', err);
-    const mockEvents = [
-      {
-        _id: 'mock-1',
-        title: 'Azure Cloud Dev Summit',
-        description: 'Deep dive into cloud native architectures, serverless computing, and hands-on deployment with Microsoft Azure.',
-        date: '2026-09-18',
-        time: '10:00 AM',
-        venue: 'Auditorium 1, IGDTUW',
-        category: 'Workshop',
-        bannerImage: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&auto=format&fit=crop&q=80',
-        registrationLink: 'https://mscigdtuw.vercel.app/',
-        status: 'Upcoming',
-        featured: true
-      },
-      {
-        _id: 'mock-2',
-        title: 'Imagine Cup Hackathon',
-        description: 'The premier student technology competition. Build prototypes, solve global challenges, and win mentorship from Microsoft experts.',
-        date: '2026-09-22',
-        time: '09:00 AM',
-        venue: 'Tech Hall, IGDTUW',
-        category: 'Hackathon',
-        bannerImage: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&auto=format&fit=crop&q=80',
-        registrationLink: 'https://mscigdtuw.vercel.app/',
-        status: 'Upcoming',
-        featured: false
-      },
-      {
-        _id: 'mock-3',
-        title: 'AI/ML Innovation Bootcamp',
-        description: 'Comprehensive bootcamp on modern machine learning techniques, neural networks, and model deployment.',
-        date: '2026-09-28',
-        time: '11:00 AM',
-        venue: 'Lab 3, IGDTUW',
-        category: 'Bootcamp',
-        bannerImage: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80',
-        registrationLink: 'https://mscigdtuw.vercel.app/',
-        status: 'Upcoming',
-        featured: false
-      },
-      {
-        _id: 'mock-4',
-        title: 'Algorithmic Coding Showdown',
-        description: 'Showcase your competitive programming skills in this intense multi-round algorithm sprint.',
-        date: '2026-10-05',
-        time: '02:00 PM',
-        venue: 'CS Department, IGDTUW',
-        category: 'Competition',
-        bannerImage: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=800&auto=format&fit=crop&q=80',
-        registrationLink: 'https://mscigdtuw.vercel.app/',
-        status: 'Upcoming',
-        featured: false
-      }
-    ];
+    console.error('Fetch home props error:', err);
     return {
       props: {
-        upcomingEvents: mockEvents,
-        featuredEvent: mockEvents[0],
-        fromDb: false
+        upcomingEvents: [],
+        featuredEvent: null,
+        fromDb: false,
+        error: 'Unable to load events. Please try again.'
       }
     };
   }
@@ -116,24 +62,7 @@ export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
     gallery: false
   });
 
-  useEffect(() => {
-    // Only load localStorage offline fallback if database failed or returned no events
-    if (!fromDb || upcomingEvents.length === 0) {
-      const localEvents = getLocalEvents();
-      const todayString = new Date().toISOString().split('T')[0];
-      const upcomingOnly = localEvents.filter(e => e.status === 'Upcoming' && e.date >= todayString);
-      
-      // If there are actual local events, use them
-      if (upcomingOnly.length > 0) {
-        setActiveEvents(upcomingOnly);
-        let feat = upcomingOnly.find(e => e.featured === true) || null;
-        if (!feat && upcomingOnly.length > 0) {
-          feat = upcomingOnly[0];
-        }
-        setActiveFeatured(feat);
-      }
-    }
-  }, [fromDb, upcomingEvents]);
+  // No localStorage or mock fallback — rely only on MongoDB via server-side props
 
   useEffect(() => {
     const handleReveal = () => {

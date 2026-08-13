@@ -26,14 +26,16 @@ export default async function handler(req, res) {
         await dbConnect();
         const event = await Event.findById(id);
         if (!event) {
-          return res.status(200).json({ success: false, offlineFallback: true, message: 'Event not found in DB' });
+          return res.status(404).json({ success: false, message: 'Event not found.' });
         }
-        res.status(200).json({ success: true, data: event });
+        return res.status(200).json({ success: true, data: event });
       } catch (error) {
-        console.error('Database connection failed in GET [id], triggering offlineFallback:', error);
-        res.status(200).json({ success: false, offlineFallback: true, message: error.message });
+        console.error(`GET /api/events/${id} — DB error:`, error.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Unable to load event. Please try again.'
+        });
       }
-      break;
 
     case 'PUT':
       if (!isAuthorized) {
@@ -41,22 +43,33 @@ export default async function handler(req, res) {
       }
       try {
         await dbConnect();
+
+        // If marking this event featured, unset all others first
         if (req.body.featured === true) {
           await Event.updateMany({ _id: { $ne: id } }, { featured: false });
         }
+
         const event = await Event.findByIdAndUpdate(id, req.body, {
           new: true,
           runValidators: true
         });
+
         if (!event) {
-          return res.status(200).json({ success: false, offlineFallback: true, message: 'Event not found in DB' });
+          return res.status(404).json({ success: false, message: 'Event not found.' });
         }
-        res.status(200).json({ success: true, data: event });
+
+        return res.status(200).json({ success: true, data: event });
       } catch (error) {
-        console.error('Database connection failed in PUT [id], triggering offlineFallback:', error);
-        res.status(200).json({ success: false, offlineFallback: true, message: error.message });
+        console.error(`PUT /api/events/${id} — DB error:`, error.message);
+        if (error.name === 'ValidationError') {
+          const messages = Object.values(error.errors).map(e => e.message).join(', ');
+          return res.status(400).json({ success: false, message: messages });
+        }
+        return res.status(500).json({
+          success: false,
+          message: 'Unable to update event. Please try again.'
+        });
       }
-      break;
 
     case 'DELETE':
       if (!isAuthorized) {
@@ -64,20 +77,21 @@ export default async function handler(req, res) {
       }
       try {
         await dbConnect();
-        const deletedEvent = await Event.deleteOne({ _id: id });
-        if (!deletedEvent.deletedCount) {
-          return res.status(200).json({ success: false, offlineFallback: true, message: 'Event not found in DB' });
+        const deletedEvent = await Event.findByIdAndDelete(id);
+        if (!deletedEvent) {
+          return res.status(404).json({ success: false, message: 'Event not found.' });
         }
-        res.status(200).json({ success: true, data: {} });
+        return res.status(200).json({ success: true, data: {} });
       } catch (error) {
-        console.error('Database connection failed in DELETE [id], triggering offlineFallback:', error);
-        res.status(200).json({ success: false, offlineFallback: true, message: error.message });
+        console.error(`DELETE /api/events/${id} — DB error:`, error.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Unable to delete event. Please try again.'
+        });
       }
-      break;
 
     default:
       res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
-      res.status(455).end(`Method ${method} Not Allowed`);
-      break;
+      return res.status(405).end(`Method ${method} Not Allowed`);
   }
 }

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { Search, Plus, Edit2, Trash2, Eye, AlertTriangle, CheckCircle, RefreshCw, Loader2 } from 'lucide-react';
 import AdminLayout from '../../../components/AdminLayout';
-import { getLocalEvents, deleteLocalEvent } from '../../../lib/eventStorage';
 
 export default function AdminEventsListPage() {
   const [events, setEvents] = useState([]);
@@ -11,7 +10,7 @@ export default function AdminEventsListPage() {
   const [activeFilterTab, setActiveFilterTab] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [loading, setLoading] = useState(true);
-  const [isOffline, setIsOffline] = useState(false);
+  const [error, setError] = useState('');
 
   // Deletion modal states
   const [deletingEventId, setDeletingEventId] = useState(null);
@@ -22,28 +21,26 @@ export default function AdminEventsListPage() {
 
   const router = useRouter();
 
-  // Fetch events
+  // Fetch events from MongoDB via API — single source of truth
   const fetchEvents = async () => {
     setLoading(true);
+    setError('');
     try {
-      const res = await fetch('/api/events');
+      const res = await fetch('/api/events', { cache: 'no-store' });
       const data = await res.json();
       if (data.success && data.data) {
         setEvents(data.data);
         setFilteredEvents(data.data);
-        setIsOffline(false);
       } else {
-        const localEvents = getLocalEvents();
-        setEvents(localEvents);
-        setFilteredEvents(localEvents);
-        setIsOffline(true);
+        setError(data.message || 'Unable to load events. Please try again.');
+        setEvents([]);
+        setFilteredEvents([]);
       }
     } catch (err) {
-      console.error('Fetch failed, loading localStorage:', err);
-      const localEvents = getLocalEvents();
-      setEvents(localEvents);
-      setFilteredEvents(localEvents);
-      setIsOffline(true);
+      console.error('fetchEvents error:', err);
+      setError('Unable to load events. Please check your connection and try again.');
+      setEvents([]);
+      setFilteredEvents([]);
     } finally {
       setLoading(false);
     }
@@ -60,7 +57,7 @@ export default function AdminEventsListPage() {
     // Search query match
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
-      result = result.filter(e => 
+      result = result.filter(e =>
         e.title.toLowerCase().includes(q) ||
         e.description.toLowerCase().includes(q) ||
         e.venue.toLowerCase().includes(q) ||
@@ -94,42 +91,28 @@ export default function AdminEventsListPage() {
     }, 4000);
   };
 
-  // Delete event confirmation
+  // Delete event — MongoDB only
   const handleDeleteConfirm = async () => {
     if (!deletingEventId) return;
     setDeleteLoading(true);
 
     try {
-      if (isOffline || String(deletingEventId).startsWith('mock-') || String(deletingEventId).startsWith('local-')) {
-        deleteLocalEvent(deletingEventId);
-        setEvents((prev) => prev.filter((e) => e._id !== deletingEventId));
-        setDeletingEventId(null);
-        showToast('success', 'Event deleted (local mode).');
-        setDeleteLoading(false);
-        return;
-      }
       const res = await fetch(`/api/events/${deletingEventId}`, { method: 'DELETE' });
       const data = await res.json();
 
       if (data.success) {
-        deleteLocalEvent(deletingEventId);
         showToast('success', 'Event successfully deleted.');
         setDeletingEventId(null);
-        fetchEvents();
-      } else if (data.offlineFallback) {
-        deleteLocalEvent(deletingEventId);
-        setEvents((prev) => prev.filter((e) => e._id !== deletingEventId));
-        setDeletingEventId(null);
-        showToast('success', 'Event deleted (local mode — DB offline).');
+        // Refetch from MongoDB to reflect true state
+        await fetchEvents();
       } else {
-        showToast('error', data.message || 'Failed to delete event.');
+        showToast('error', data.message || 'Unable to delete event.');
+        // Do NOT remove from UI — deletion failed
       }
     } catch (err) {
-      console.error(err);
-      deleteLocalEvent(deletingEventId);
-      setEvents((prev) => prev.filter((e) => e._id !== deletingEventId));
-      setDeletingEventId(null);
-      showToast('success', 'Event deleted (local mode — network error).');
+      console.error('Delete error:', err);
+      showToast('error', 'Unable to delete event. Please try again.');
+      // Do NOT remove from UI — deletion failed
     } finally {
       setDeleteLoading(false);
     }
@@ -154,7 +137,7 @@ export default function AdminEventsListPage() {
 
   return (
     <AdminLayout pageTitle="Events">
-      {/* Header bar matching specs */}
+      {/* Header bar */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -171,8 +154,8 @@ export default function AdminEventsListPage() {
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }} className="actions-wrapper">
           <div style={{ position: 'relative', width: '220px' }}>
             <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Search events..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -190,7 +173,7 @@ export default function AdminEventsListPage() {
             />
           </div>
 
-          <select 
+          <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={{
@@ -210,7 +193,26 @@ export default function AdminEventsListPage() {
             {categoriesList.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
 
-          <button 
+          <button
+            onClick={() => fetchEvents()}
+            title="Refresh from MongoDB"
+            style={{
+              height: '38px',
+              width: '38px',
+              backgroundColor: '#F8F7FF',
+              border: '1px solid #E5E7EB',
+              borderRadius: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#6C3BFF'
+            }}
+          >
+            <RefreshCw size={15} />
+          </button>
+
+          <button
             onClick={() => router.push('/admin/events/create')}
             style={{
               height: '38px',
@@ -263,6 +265,32 @@ export default function AdminEventsListPage() {
         })}
       </div>
 
+      {/* Error State */}
+      {error && !loading && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          backgroundColor: 'rgba(239, 68, 68, 0.05)',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
+          color: '#EF4444',
+          padding: '14px 18px',
+          borderRadius: '10px',
+          marginBottom: '20px',
+          fontSize: '13px',
+          fontWeight: '600'
+        }}>
+          <AlertTriangle size={16} />
+          <span>{error}</span>
+          <button
+            onClick={fetchEvents}
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <RefreshCw size={13} /> Retry
+          </button>
+        </div>
+      )}
+
       {/* Events Table Container Card */}
       <div style={{
         backgroundColor: '#FFFFFF',
@@ -271,10 +299,11 @@ export default function AdminEventsListPage() {
         boxShadow: '0 4px 20px rgba(80,60,150,0.02)',
         overflow: 'hidden'
       }}>
-        
+
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-            <Loader2 size={24} className="animate-spin" style={{ color: '#6C3BFF' }} />
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', padding: '40px', color: '#6B7280', fontSize: '14px' }}>
+            <Loader2 size={20} className="animate-spin" style={{ color: '#6C3BFF' }} />
+            <span>Loading events...</span>
           </div>
         ) : (
           <>
@@ -371,21 +400,21 @@ export default function AdminEventsListPage() {
                         {/* Actions */}
                         <td style={{ padding: '12px 20px' }}>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            <button 
+                            <button
                               onClick={() => router.push(`/events/${event._id}`)}
                               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '4px' }}
                               title="View Event"
                             >
                               <Eye size={15} />
                             </button>
-                            <button 
+                            <button
                               onClick={() => router.push(`/admin/events/edit/${event._id}`)}
                               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C3BFF', padding: '4px' }}
                               title="Edit Event"
                             >
                               <Edit2 size={14} />
                             </button>
-                            <button 
+                            <button
                               onClick={() => setDeletingEventId(event._id)}
                               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: '4px' }}
                               title="Delete Event"
@@ -397,7 +426,7 @@ export default function AdminEventsListPage() {
                       </tr>
                     );
                   })}
-                  {filteredEvents.length === 0 && (
+                  {filteredEvents.length === 0 && !error && (
                     <tr>
                       <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#6B7280', fontSize: '13px' }}>
                         No events found matching current filters.
@@ -412,9 +441,6 @@ export default function AdminEventsListPage() {
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', padding: '16px', borderTop: '1px solid #E9E7F2' }}>
               <button style={{ height: '30px', padding: '0 12px', background: '#F8F7FF', border: '1px solid #E9E7F2', borderRadius: '6px', fontSize: '12px', color: '#6B7280', fontWeight: '600', cursor: 'pointer' }}>&lt; Prev</button>
               <button style={{ height: '30px', width: '30px', background: '#6C3BFF', border: 'none', borderRadius: '6px', fontSize: '12px', color: '#FFFFFF', fontWeight: '700', cursor: 'pointer' }}>1</button>
-              <button style={{ height: '30px', width: '30px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '12px', color: '#6B7280', fontWeight: '600', cursor: 'pointer' }}>2</button>
-              <span style={{ fontSize: '12px', color: '#9CA3AF' }}>...</span>
-              <button style={{ height: '30px', width: '30px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '12px', color: '#6B7280', fontWeight: '600', cursor: 'pointer' }}>5</button>
               <button style={{ height: '30px', padding: '0 12px', background: '#F8F7FF', border: '1px solid #E9E7F2', borderRadius: '6px', fontSize: '12px', color: '#6B7280', fontWeight: '600', cursor: 'pointer' }}>Next &gt;</button>
             </div>
           </>
@@ -466,19 +492,24 @@ export default function AdminEventsListPage() {
               <p style={{ fontSize: '13.5px', color: '#6B7280', lineHeight: '1.5' }}>Are you sure you want to permanently delete this event? This action is irreversible.</p>
             </div>
             <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '8px' }}>
-              <button 
+              <button
                 onClick={() => setDeletingEventId(null)}
                 style={{ flex: 1, height: '40px', borderRadius: '30px', border: '1px solid #E9E7F2', backgroundColor: '#F8F7FF', color: '#6B7280', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                 disabled={deleteLoading}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleDeleteConfirm}
-                style={{ flex: 1, height: '40px', borderRadius: '30px', border: 'none', backgroundColor: '#EF4444', color: '#FFFFFF', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+                style={{ flex: 1, height: '40px', borderRadius: '30px', border: 'none', backgroundColor: '#EF4444', color: '#FFFFFF', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 disabled={deleteLoading}
               >
-                {deleteLoading ? 'Deleting...' : 'Delete Event'}
+                {deleteLoading ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : 'Delete Event'}
               </button>
             </div>
           </div>
@@ -488,8 +519,8 @@ export default function AdminEventsListPage() {
       {/* Toast Alert Popups */}
       <div style={{ position: 'fixed', bottom: '24px', right: '24px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 3000 }}>
         {toasts.map(toast => (
-          <div 
-            key={toast.id} 
+          <div
+            key={toast.id}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -514,6 +545,13 @@ export default function AdminEventsListPage() {
       <style jsx global>{`
         .table-row-hover:hover {
           background-color: #FAFAFC !important;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
         }
         @media (max-width: 768px) {
           .list-header-grid {
