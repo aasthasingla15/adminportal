@@ -1,37 +1,21 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { Calendar, MapPin, Tag, ArrowUpRight, ArrowLeft, Clock } from 'lucide-react';
-import dbConnect from '../../lib/mongodb';
-import Event from '../../models/Event';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useTheme } from '../../context/ThemeContext';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
-export async function getServerSideProps(context) {
-  const { id } = context.params;
-
-  try {
-    await dbConnect();
-    const event = await Event.findById(id);
-    if (!event) {
-      // Event not in MongoDB — show proper 404
-      return { notFound: true };
-    }
-    return {
-      props: {
-        event: JSON.parse(JSON.stringify(event))
-      }
-    };
-  } catch (err) {
-    console.error('Event detail getServerSideProps error:', err.message);
-    // DB failure — show 404 rather than mock data
-    return { notFound: true };
-  }
-}
-
-export default function EventDetailPage({ event }) {
+export default function EventDetailPage() {
+  const router = useRouter();
+  const { id } = router.query;
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -48,6 +32,32 @@ export default function EventDetailPage({ event }) {
     }
   };
 
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    fetch(`/api/events/${id}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        if (json.success && json.data) {
+          setEvent(json.data);
+        } else {
+          setError(json.message || 'Unable to load event.');
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('Event fetch error:', err);
+        setError('Unable to load event.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [id]);
+
   return (
     <div style={{
       backgroundColor: isDark ? '#08080C' : '#F8F7FF',
@@ -58,8 +68,8 @@ export default function EventDetailPage({ event }) {
       position: 'relative'
     }}>
       <Head>
-        <title>{event.title} | MSC Events</title>
-        <meta name="description" content={event.description ? event.description.slice(0, 150) : ''} />
+        <title>{event ? `${event.title} | MSC Events` : 'Loading...'} </title>
+        <meta name="description" content={event && event.description ? event.description.slice(0, 150) : ''} />
       </Head>
 
       <Navbar />
@@ -74,18 +84,24 @@ export default function EventDetailPage({ event }) {
           backgroundColor: '#08080C',
           borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #ECEAF5'
         }} className="detail-banner-box">
-          <img
-            src={event.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80'}
-            alt={event.title}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              opacity: isDark ? 0.5 : 0.75
-            }}
-          />
+          {event && event.bannerImage ? (
+            <img
+              src={event.bannerImage}
+              alt={event.title}
+              loading="lazy"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: isDark ? 0.5 : 0.75
+              }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: isDark ? '#0B0B0F' : '#F3F4F6' }} />
+          )}
+
           {/* Back Button floating */}
-          <Link href="/events" style={{
+          <button onClick={() => router.back()} style={{
             position: 'absolute',
             top: '24px',
             left: '8%',
@@ -103,8 +119,8 @@ export default function EventDetailPage({ event }) {
             transition: 'all 200ms ease'
           }}>
             <ArrowLeft size={14} />
-            <span>Back to Events</span>
-          </Link>
+            <span>Back</span>
+          </button>
         </div>
 
         {/* Content Layout Grid */}
@@ -132,7 +148,7 @@ export default function EventDetailPage({ event }) {
               letterSpacing: '0.05em',
               textTransform: 'uppercase'
             }}>
-              {event.category}
+              {event ? event.category : ''}
             </span>
 
             <h1 style={{
@@ -143,7 +159,7 @@ export default function EventDetailPage({ event }) {
               letterSpacing: '-0.02em',
               transition: 'color 300ms ease'
             }}>
-              {event.title}
+              {event ? event.title : (loading ? 'Loading...' : 'Event')}
             </h1>
 
             <div style={{ borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #ECEAF5', paddingBottom: '10px' }} />
@@ -157,7 +173,7 @@ export default function EventDetailPage({ event }) {
                 whiteSpace: 'pre-wrap',
                 transition: 'color 300ms ease'
               }}>
-                {event.description}
+                {event ? event.description : (loading ? 'Loading event details...' : 'Unable to load event.')}
               </p>
             </div>
           </div>
@@ -194,7 +210,7 @@ export default function EventDetailPage({ event }) {
                   </div>
                   <div>
                     <p style={{ fontSize: '11px', color: isDark ? '#A1A1AA' : '#9CA3AF', fontWeight: '750', textTransform: 'uppercase' }}>Date</p>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: isDark ? '#FFFFFF' : '#111111' }}>{formatDate(event.date)}</span>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: isDark ? '#FFFFFF' : '#111111' }}>{event ? formatDate(event.date) : ''}</span>
                   </div>
                 </div>
 
@@ -213,7 +229,7 @@ export default function EventDetailPage({ event }) {
                   </div>
                   <div>
                     <p style={{ fontSize: '11px', color: isDark ? '#A1A1AA' : '#9CA3AF', fontWeight: '750', textTransform: 'uppercase' }}>Time</p>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: isDark ? '#FFFFFF' : '#111111' }}>{event.time}</span>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: isDark ? '#FFFFFF' : '#111111' }}>{event ? event.time : ''}</span>
                   </div>
                 </div>
 
