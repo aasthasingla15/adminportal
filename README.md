@@ -1,143 +1,155 @@
-# 🎓 MSC Events Portal — Admin Dashboard
+# MSC Events — Admin Portal
 
-> A full-stack event management system built with **Next.js**, **MongoDB**, and **Vercel-ready deployment**. Administrators can create, manage, and delete events through a secure dashboard; the public sees them dynamically on the Events page with **Register Now** buttons linking to external registration URLs.
+A full-stack event management application for the Microsoft Student Chapter (MSC) at IGDTUW. Administrators manage events through a protected Admin Portal; public users can browse upcoming events and follow external registration links.
 
 ---
 
-## 🌐 Live Demo
+## Overview
 
-| Page | URL |
-|---|---|
-| 🏠 Public Home | `/` |
-| 📅 Public Events | `/events` |
-| 🔐 Admin Login | `/admin/login` |
-| 🎛️ Admin Dashboard | `/admin` |
-| ➕ Create Event | `/admin/events/create` |
+This repository contains a single Next.js application with two distinct experiences:
 
-**Demo Credentials:**
+- Public website: home, events listing, and event detail pages.
+- Protected Admin Portal: login, dashboard, and event management (create/edit/delete).
+
+MongoDB is the single source of truth for events. All event reads and writes go through the Next.js API routes.
+
+---
+
+## Features
+
+### Public Website
+- Home page with featured/upcoming events
+- Events listing (`/events`) showing upcoming events
+- Event details page (`/events/[id]`)
+- External registration links open in a new tab
+- Responsive design for desktop/tablet/mobile
+
+### Admin Portal
+- Admin login at `/admin/login` (session cookie-based)
+- Protected admin routes (dashboard and events pages)
+- Dashboard overview with stats and recent events
+- View, create, edit, and delete events
+- Image/banner upload with optional Cloudinary support (base64 fallback)
+- Responsive admin interface
+
+### Database & API
+- MongoDB via Mongoose
+- Next.js API routes for CRUD operations:
+   - `GET /api/events`
+   - `POST /api/events` (admin only)
+   - `GET /api/events/[id]`
+   - `PUT /api/events/[id]` (admin only)
+   - `DELETE /api/events/[id]` (admin only)
+
+---
+
+## Technology Stack
+
+Inspect `package.json` — the project uses:
+
+- Next.js
+- React
+- MongoDB (Mongoose)
+- Lucide React (icons)
+
+No additional UI frameworks (Tailwind, Chakra, etc.) are required.
+
+---
+
+## Project Structure
+
+Top-level folders/files of interest:
+
 ```
-Username : admin
-Password : adminpassword123
-```
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Framework** | Next.js 14 (Pages Router + API Routes) |
-| **Runtime** | Node.js (via Next.js API Routes) |
-| **Database** | MongoDB with Mongoose ODM |
-| **Styling** | Vanilla CSS (CSS Variables, CSS Modules, JSX inline styles) |
-| **Icons** | Lucide React |
-| **Deployment** | Vercel |
-
----
-
-## ✅ Functional Requirements Checklist
-
-### 1. Authentication
-- [x] Admin login page at `/admin/login`
-- [x] HTTP-only session cookie (secure, `SameSite=Lax`)
-- [x] Protected admin routes — unauthenticated users redirected to login
-- [x] Logout functionality clears the session cookie
-- [x] Credential hint displayed on login page for demo purposes
-
-### 2. Admin Dashboard
-- [x] View all events with search, status filter, and category filter
-- [x] Add a new event (`/admin/events/create`)
-- [x] Edit an existing event (`/admin/events/edit/[id]`)
-- [x] Delete an event with confirmation modal
-- [x] Dashboard overview with stats: Total Events, Upcoming, Categories, Published
-- [x] Recent events table on dashboard overview
-
-### 3. Event Fields
-Each event stores: **Title**, **Description**, **Date**, **Time**, **Venue**, **Category**, **Banner Image**, **Registration Link**, **Status**, **Featured flag**
-
-### 4. Public Events Page
-- [x] Fetches events from MongoDB via API Route
-- [x] Displays all upcoming events in a responsive grid
-- [x] Shows event title, description, date/time, venue, and category badge
-- [x] **Register Now button** on every card — opens registration link in a new tab
-- [x] Details page at `/events/[id]` with full event info
-- [x] Falls back to localStorage cache when MongoDB is offline
-
-### 5. Database (MongoDB + Mongoose)
-- [x] Full CRUD via Next.js API Routes
-- [x] Automatic unfeaturing hook — only one featured event at a time
-- [x] `offlineFallback` flag in API responses when DB is unreachable
-
-### 6. Responsive Design
-- [x] Fully responsive: mobile, tablet, desktop
-- [x] Hamburger navigation drawer on mobile
-- [x] Admin sidebar collapses to a drawer on small viewports
-- [x] Cards stack to single-column on mobile
-- [x] Forms adapt to single-column layout on mobile
-
----
-
-## 🌟 Bonus Features Implemented
-
-| Feature | Status |
-|---|---|
-| Event search | ✅ |
-| Category filters | ✅ |
-| Form validation | ✅ |
-| Loading indicators / Skeleton cards | ✅ |
-| Toast notifications | ✅ |
-| Pagination (8 per page) | ✅ |
-| Dark mode toggle (Sun/Moon) | ✅ |
-| Image upload (Base64 + Cloudinary support) | ✅ |
-| Featured event spotlight on homepage | ✅ |
-| localStorage offline fallback sync | ✅ |
-
----
-
-## 🗄️ MongoDB Schema
-
-```javascript
-// models/Event.js
-{
-  title:            String,   // required, max 100 chars
-  description:      String,   // required
-  date:             String,   // format: YYYY-MM-DD
-  time:             String,   // format: HH:MM AM/PM
-  venue:            String,   // required
-  category:         String,   // enum: Workshop | Hackathon | Bootcamp | Competition | Talk | Seminar | Cultural | Sports | Conference | Other
-  bannerImage:      String,   // Base64 data URI or Cloudinary HTTPS URL
-  registrationLink: String,   // valid external URL
-  status:           String,   // enum: Upcoming | Completed | Draft (default: Upcoming)
-  featured:         Boolean,  // default: false — only one event featured at a time
-  createdAt:        Date,     // auto
-  updatedAt:        Date,     // auto
-}
+pages/
+   index.js
+   events/
+      index.js
+      [id].js
+   admin/
+      login.js
+      index.js
+      events/
+         create.js
+         index.js
+         edit/[id].js
+   api/
+      events
+         index.js
+         [id].js
+components/
+lib/
+models/
+public/
+README.md
+package.json
 ```
 
 ---
 
-## 🔌 API Routes
+## Routes
 
-| Method | Route | Description | Auth Required |
-|---|---|---|---|
-| GET | `/api/events` | List all events (sorted by date) | No |
-| POST | `/api/events` | Create new event | Yes |
-| GET | `/api/events/[id]` | Get single event | No |
-| PUT | `/api/events/[id]` | Update event | Yes |
-| DELETE | `/api/events/[id]` | Delete event | Yes |
-| POST | `/api/auth/login` | Admin login | No |
-| POST | `/api/auth/logout` | Admin logout | No |
-| GET | `/api/auth/session` | Check session status | No |
+Public routes:
+
+- `/`
+- `/events`
+- `/events/[id]`
+- `/about`
+- `/contact`
+
+Admin routes (protected):
+
+- `/admin/login`
+- `/admin`
+- `/admin/events`
+- `/admin/events/create`
+- `/admin/events/edit/[id]`
+
+API routes:
+
+- `/api/events`
+- `/api/events/[id]`
 
 ---
 
-## 📁 Project Setup
+## Event Schema
 
-### Prerequisites
-- Node.js 18+
-- MongoDB (local or Atlas)
+The Mongoose model `models/Event.js` defines the event document with these fields:
 
-### Step 1 — Clone & Install
+- `title` (String, required)
+- `description` (String, required)
+- `date` (String, format YYYY-MM-DD, required)
+- `time` (String, required)
+- `venue` (String, required)
+- `category` (String, enum)
+- `bannerImage` (String, base64 or HTTPS URL)
+- `registrationLink` (String)
+- `status` (String, enum: Upcoming/Completed/Draft)
+- `featured` (Boolean)
+
+---
+
+## Environment Variables
+
+Required variables (placeholders):
+
+```
+MONGODB_URI=your_mongodb_connection_string
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_admin_password
+
+# Optional (Cloudinary unsigned uploads)
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=
+```
+
+Do NOT commit real credentials to the repository.
+
+---
+
+## Local Development
+
+1. Clone the repo:
 
 ```bash
 git clone https://github.com/aasthasingla15/adminportal.git
@@ -145,82 +157,56 @@ cd adminportal
 npm install
 ```
 
-### Step 2 — Environment Variables
+2. Create `.env.local` from `.env.example` and set `MONGODB_URI` and admin credentials.
 
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local`:
-
-```env
-# MongoDB connection string
-MONGODB_URI=mongodb://127.0.0.1:27017/msc_events
-
-# Admin credentials
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=adminpassword123
-
-# Optional: Cloudinary image uploads (leave blank to use Base64 fallback)
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
-NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=
-```
-
-### Step 3 — Run Development Server
+3. Run the dev server:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open `http://localhost:3000`.
 
 ---
 
-## 🚀 Deploy to Vercel
+## Build & Deploy
 
-1. Push your code to GitHub
-2. Go to [vercel.com](https://vercel.com) → **New Project** → Import your GitHub repo
-3. Add **Environment Variables** in Vercel project settings:
-   - `MONGODB_URI` → your MongoDB Atlas connection string
-   - `ADMIN_USERNAME` → `admin`
-   - `ADMIN_PASSWORD` → `adminpassword123`
-4. Click **Deploy** — live in ~2 minutes
+Build locally:
 
-> **Note:** Use [MongoDB Atlas](https://cloud.mongodb.com) (free tier) for the `MONGODB_URI` on Vercel, as local MongoDB won't be accessible.
+```bash
+npm run build
+```
+
+Deploy to Vercel by connecting the GitHub repository and setting `MONGODB_URI` in Vercel environment variables. Ensure MongoDB Atlas network access allows Vercel IPs or set access appropriately.
 
 ---
 
-## 💡 Design Decisions & Assumptions
+## Authentication
 
-| Decision | Rationale |
-|---|---|
-| **Dummy credentials** | Problem statement explicitly allows dummy credentials for authentication |
-| **HTTP-Only cookie session** | More secure than localStorage tokens; prevents XSS attacks |
-| **Base64 image fallback** | Ensures image uploads work without mandatory Cloudinary configuration |
-| **localStorage offline sync** | Allows the public events page to show events even if MongoDB is temporarily unreachable |
-| **One featured event** | Backend enforces a single featured event via an auto-unfeaturing hook |
-| **Pages Router (not App Router)** | More stable for the existing codebase; API Routes work identically |
-| **CSS-in-JS (styled-jsx)** | Avoids TailwindCSS dependency while keeping component-scoped styles |
-| **`offlineFallback` API flag** | Allows the client to distinguish "DB offline" from "genuine error" |
+Admin authentication uses an HTTP-only cookie (`admin_session`) set after a successful login. The server-side API routes check this cookie before allowing create/update/delete operations.
+
+If demo credentials are present in `.env.example`, they can be used for testing; otherwise configure admin credentials in `.env.local`.
 
 ---
 
-## 📱 Responsive Breakpoints
+## Removing Test Data
 
-| Breakpoint | Layout Change |
-|---|---|
-| `> 1024px` | 4-column event grid, full sidebar |
-| `768px – 1024px` | 2-column event grid, full sidebar |
-| `< 768px` | 1-column grid, hamburger nav, stacked forms |
+Temporary test events (created during debugging) have been removed from the production database. If you see test titles like "SYNC TEST EVENT" or "SYNC PUBLIC EVENT", delete them via the Admin Dashboard or the API.
 
 ---
 
-## 🔐 Security Notes
+## Design Decisions
 
-- Admin session stored in **HTTP-only** cookie (`admin_session`) — inaccessible to JavaScript
-- All admin API routes check for a valid session cookie before processing
-- Unauthenticated requests to `/admin/*` pages redirect to `/admin/login`
-- Credentials configurable via environment variables (not hardcoded)
+- Keep public and admin experiences separate within one Next.js application.
+- MongoDB is the single source of truth — no runtime localStorage or mock fallbacks are used for event data.
+- External registration links open in new tabs; internal navigation uses Next.js `Link` and opens in the same tab.
+
+---
+
+## Contact
+
+For questions, open an issue on the repository or contact the maintainer.
+
 
 
 

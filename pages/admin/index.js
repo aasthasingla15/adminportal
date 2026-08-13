@@ -294,7 +294,7 @@ export default function AdminDashboardOverview() {
                     <td style={{ padding: '16px', fontSize: '13px', color: '#6B7280' }}>{event.venue}</td>
                     <td style={{ padding: '16px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                        <Link href={`/events/${event._id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#9CA3AF', cursor: 'pointer' }} className="action-btn-hover">
+                        <Link href={`/events/${event._id}`} style={{ color: '#9CA3AF', cursor: 'pointer' }} className="action-btn-hover">
                           <Eye size={16} />
                         </Link>
                         <Link href={`/admin/events/edit/${event._id}`} style={{ color: '#9CA3AF', cursor: 'pointer' }} className="action-btn-hover">

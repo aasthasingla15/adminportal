@@ -143,6 +143,22 @@ export default function Navbar() {
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           
+          <Link href="/admin/login" style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            background: 'none',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#ECEAF5'}`,
+            borderRadius: '8px',
+            color: isDark ? '#FFFFFF' : '#111111',
+            fontWeight: 700,
+            textDecoration: 'none',
+            cursor: 'pointer'
+          }} className="navbar-admin-btn">
+            <span style={{ fontSize: '12px' }}>ADMIN</span>
+          </Link>
+
           <button 
             onClick={() => setMobileMenuOpen(true)}
             className="hamburger-only-nav"
