@@ -18,7 +18,7 @@ export default function AdminLoginPage() {
   useEffect(() => {
     async function checkSession() {
       try {
-        const res = await fetch('/api/auth/session');
+        const res = await fetch('/api/auth/session', { cache: 'no-store' });
         const data = await res.json();
         if (data.authenticated) {
           router.push('/admin');

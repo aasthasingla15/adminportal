@@ -9,7 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import dbConnect from '../lib/mongodb';
 import Event from '../models/Event';
 
-export async function getServerSideProps() {
+export async function getStaticProps() {
   try {
     await dbConnect();
     const todayString = new Date().toISOString().split('T')[0];
@@ -18,11 +18,8 @@ export async function getServerSideProps() {
       date: { $gte: todayString }
     }).sort({ date: 1 }).lean();
     const events = JSON.parse(JSON.stringify(rawEvents));
-    
-    // Find featured event
+
     let featuredEvent = events.find(e => e.featured === true) || null;
-    
-    // If no event is marked featured, take the first upcoming event as fallback
     if (!featuredEvent && events.length > 0) {
       featuredEvent = events[0];
     }
@@ -32,7 +29,8 @@ export async function getServerSideProps() {
         upcomingEvents: events,
         featuredEvent,
         fromDb: true
-      }
+      },
+      revalidate: 60
     };
   } catch (err) {
     console.error('Fetch home props error:', err);
@@ -42,7 +40,8 @@ export async function getServerSideProps() {
         featuredEvent: null,
         fromDb: false,
         error: 'Unable to load events. Please try again.'
-      }
+      },
+      revalidate: 30
     };
   }
 }

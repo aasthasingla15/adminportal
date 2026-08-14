@@ -8,7 +8,7 @@ import { useTheme } from '../../context/ThemeContext';
 import dbConnect from '../../lib/mongodb';
 import Event from '../../models/Event';
 
-export async function getServerSideProps() {
+export async function getStaticProps() {
   try {
     await dbConnect();
     const todayString = new Date().toISOString().split('T')[0];
@@ -24,10 +24,13 @@ export async function getServerSideProps() {
       status: 1,
       featured: 1
     }).sort({ date: 1 }).lean();
-    return { props: { initialEvents: JSON.parse(JSON.stringify(raw)) } };
+    return {
+      props: { initialEvents: JSON.parse(JSON.stringify(raw)) },
+      revalidate: 60
+    };
   } catch (err) {
-    console.error('Events getServerSideProps error:', err.message);
-    return { props: { initialEvents: [] } };
+    console.error('Events getStaticProps error:', err.message);
+    return { props: { initialEvents: [] }, revalidate: 30 };
   }
 }
 
