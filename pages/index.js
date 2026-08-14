@@ -856,6 +856,11 @@ export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
           }
           .featured-event-layout > div:first-child {
             height: 260px !important;
+            min-height: 260px !important;
+          }
+          .featured-event-layout img {
+            object-position: center center !important;
+            transform: scale(1.02);
           }
           .philosophy-header {
             grid-template-columns: 1fr !important;
@@ -868,6 +873,9 @@ export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
           }
           .gallery-card {
             height: 220px !important;
+          }
+          .gallery-image {
+            object-position: center !important;
           }
           .categories-card-grid {
             grid-template-columns: 1fr !important;

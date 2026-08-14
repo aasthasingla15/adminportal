@@ -128,7 +128,7 @@ export default function AdminLayout({ children, pageTitle = "Admin Dashboard" })
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
           {/* Logo brand */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '8px', width: '100%' }}>
             <Shield size={20} style={{ color: '#6C3BFF' }} />
             <span style={{ fontWeight: '800', fontSize: '16px', color: '#111111' }}>✦ MSC EVENTS</span>
             {mobileSidebarOpen && (
@@ -140,6 +140,25 @@ export default function AdminLayout({ children, pageTitle = "Admin Dashboard" })
               </button>
             )}
           </div>
+
+          <Link href="/" style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            height: '36px',
+            borderRadius: '8px',
+            backgroundColor: '#F8F7FF',
+            border: '1px solid #E9E3FF',
+            color: '#6C3BFF',
+            fontSize: '12px',
+            fontWeight: '700',
+            textDecoration: 'none',
+            marginTop: '4px',
+            width: '100%'
+          }} onClick={() => setMobileSidebarOpen(false)}>
+            <span>← Visit Website</span>
+          </Link>
 
           {/* Menu links list */}
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -174,8 +193,25 @@ export default function AdminLayout({ children, pageTitle = "Admin Dashboard" })
           </nav>
         </div>
 
-        {/* Footer actions: Logout */}
-        <div style={{ borderTop: '1px solid #ECEAF3', paddingTop: '16px' }}>
+        {/* Footer actions: Website + Logout */}
+        <div style={{ borderTop: '1px solid #ECEAF3', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <Link href="/" style={{
+            height: '40px',
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#6C3BFF',
+            backgroundColor: '#F8F7FF',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            border: '1px solid #E9E3FF'
+          }}>
+            <span>← Website</span>
+          </Link>
+
           <button 
             onClick={handleLogout}
             style={{
@@ -231,6 +267,23 @@ export default function AdminLayout({ children, pageTitle = "Admin Dashboard" })
 
           {/* Right Header items */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <Link href="/" style={{
+              height: '38px',
+              padding: '0 14px',
+              borderRadius: '20px',
+              backgroundColor: '#F8F7FF',
+              border: '1px solid #E9E3FF',
+              color: '#6C3BFF',
+              fontSize: '12px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textDecoration: 'none'
+            }}>
+              Website
+            </Link>
+
             {/* Search */}
             <div style={{ position: 'relative', width: '220px' }}>
               <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
