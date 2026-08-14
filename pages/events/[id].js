@@ -1,17 +1,19 @@
 import Head from 'next/head';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Calendar, MapPin, Tag, ArrowUpRight, ArrowLeft, Clock } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useTheme } from '../../context/ThemeContext';
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 export default function EventDetailPage() {
   const router = useRouter();
   const { id } = router.query;
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const requestCacheRef = useRef(new Map());
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,16 +36,30 @@ export default function EventDetailPage() {
 
   useEffect(() => {
     if (!id) return;
+    
+    // Check if request is already in progress or cached
+    if (requestCacheRef.current.has(id)) {
+      const cachedData = requestCacheRef.current.get(id);
+      if (cachedData.data) {
+        setEvent(cachedData.data);
+        setLoading(false);
+        return;
+      }
+    }
+
     let cancelled = false;
     setLoading(true);
     setError('');
 
-    fetch(`/api/events/${id}`)
+    fetch(`/api/events/${id}?t=${Date.now()}`, {
+      signal: AbortSignal.timeout(8000) // 8 second timeout for faster failure
+    })
       .then((r) => r.json())
       .then((json) => {
         if (cancelled) return;
         if (json.success && json.data) {
           setEvent(json.data);
+          requestCacheRef.current.set(id, { data: json.data, timestamp: Date.now() });
         } else {
           setError(json.message || 'Unable to load event.');
         }
@@ -51,7 +67,7 @@ export default function EventDetailPage() {
       .catch((err) => {
         if (cancelled) return;
         console.error('Event fetch error:', err);
-        setError('Unable to load event.');
+        setError('Unable to load event. Please try again.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -84,18 +100,21 @@ export default function EventDetailPage() {
           height: '350px',
           position: 'relative',
           backgroundColor: '#08080C',
-          borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #ECEAF5'
+          borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #ECEAF5',
+          overflow: 'hidden'
         }} className="detail-banner-box">
           {event && event.bannerImage ? (
             <img
               src={event.bannerImage}
               alt={event.title}
               loading="lazy"
+              decoding="async"
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                opacity: isDark ? 0.5 : 0.75
+                opacity: isDark ? 0.5 : 0.75,
+                backfaceVisibility: 'hidden'
               }}
             />
           ) : (
@@ -316,9 +335,31 @@ export default function EventDetailPage() {
           .detail-layout-grid {
             grid-template-columns: 1fr !important;
             gap: 40px !important;
+            padding: 40px 5% 60px 5% !important;
           }
           .detail-banner-box {
-            height: 250px !important;
+            height: 280px !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .detail-layout-grid {
+            gap: 24px !important;
+            padding: 32px 4% 48px 4% !important;
+          }
+          .detail-banner-box {
+            height: 220px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .detail-layout-grid {
+            gap: 20px !important;
+            padding: 24px 3% 40px 3% !important;
+          }
+          .detail-banner-box {
+            height: 180px !important;
+          }
+          h1 {
+            font-size: 24px !important;
           }
         }
       `}</style>

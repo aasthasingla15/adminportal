@@ -34,9 +34,13 @@ export default async function handler(req, res) {
         if (!event) {
           return res.status(404).json({ success: false, message: 'Event not found.' });
         }
+        // Add caching headers for 1 hour
+        res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=7200');
+        res.setHeader('Content-Type', 'application/json');
         return res.status(200).json({ success: true, data: event });
       } catch (error) {
         console.error(`GET /api/events/${id} — DB error:`, error.message);
+        res.setHeader('Cache-Control', 'public, max-age=30');
         return res.status(500).json({
           success: false,
           message: 'Unable to load event. Please try again.'

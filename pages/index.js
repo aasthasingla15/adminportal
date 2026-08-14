@@ -432,9 +432,11 @@ export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
               <div style={{ position: 'relative', height: '420px', width: '100%' }}>
                 <img 
                   src={featuredImage}
-                  srcSet={`${buildResponsiveImageUrl(activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80', 800)} 800w, ${buildResponsiveImageUrl(activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80', 1200)} 1200w, ${buildResponsiveImageUrl(activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80', 1600)} 1600w`}
+                  srcSet={`${buildResponsiveImageUrl(activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80', 600)} 600w, ${buildResponsiveImageUrl(activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80', 1000)} 1000w, ${buildResponsiveImageUrl(activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80', 1600)} 1600w`}
                   sizes="(max-width: 768px) 100vw, 55vw"
                   alt={activeFeatured.title}
+                  loading="lazy"
+                  decoding="async"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
                 />
               </div>
@@ -852,10 +854,14 @@ export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
           }
           .featured-event-layout {
             border-radius: 16px !important;
+            grid-template-columns: 1fr !important;
           }
           .featured-event-layout > div:first-child {
             height: 260px !important;
             min-height: 260px !important;
+          }
+          .featured-event-layout > div:last-child {
+            padding: 32px 24px !important;
           }
           .featured-event-layout img {
             object-position: center center !important;
@@ -881,6 +887,30 @@ export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
           }
           .stats-grid {
             grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .hero-title {
+            font-size: 32px !important;
+          }
+          .featured-event-layout > div:first-child {
+            height: 200px !important;
+            min-height: 200px !important;
+          }
+          .featured-event-layout > div:last-child {
+            padding: 24px 16px !important;
+          }
+          .featured-event-layout h3 {
+            font-size: 20px !important;
+          }
+          .featured-event-layout p {
+            font-size: 13px !important;
+          }
+          .featured-event-layout {
+            padding: 0 0 !important;
+          }
+          #section-featured {
+            padding: 60px 4% !important;
           }
         }
       `}</style>

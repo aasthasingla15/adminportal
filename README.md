@@ -1,40 +1,39 @@
-# MSC Events — Admin Portal
+# MSC Events Portal — Admin Management System
 
-Simple instructions to run this project, the assumptions made during development, and the features implemented.
+Complete event management platform for discovering, browsing, and managing events with an admin dashboard for CRUD operations (Create, Read, Update, Delete).
 
 ---
 
-## Quick Setup
+## 🚀 Quick Start Guide
 
-1. Clone the repository:
+### Installation & Setup
 
+1. **Clone the repository:**
 ```bash
 git clone https://github.com/aasthasingla15/adminportal.git
 cd adminportal
 npm install
 ```
 
-2. Create environment file:
-
+2. **Create environment file:**
 ```bash
 cp .env.example .env.local
 ```
 
-Edit `.env.local` and set at minimum:
+Edit `.env.local` and add:
+```
+MONGODB_URI=your_mongodb_connection_string_here
+ADMIN_USERNAME=your_admin_username
+ADMIN_PASSWORD=your_admin_password
+```
 
-- `MONGODB_URI` — your MongoDB connection string
-- `ADMIN_USERNAME` and `ADMIN_PASSWORD` — admin credentials
-
-3. Run locally:
-
+3. **Run locally:**
 ```bash
 npm run dev
 ```
+Visit **http://localhost:3000** in your browser
 
-Open http://localhost:3000
-
-4. Build for production:
-
+4. **Build for production:**
 ```bash
 npm run build
 npm start
@@ -42,370 +41,321 @@ npm start
 
 ---
 
-## Assumptions (simple wording)
+## 👥 Beginner's Guide: How to Use the Website
 
-- MongoDB is the only source of truth for event data.
-- Admin authentication is session-cookie based (HTTP-only cookie named `admin_session`).
-- Banner images may be stored as base64 or remote URLs; list API avoids returning large image blobs.
-- Deployment target is Vercel or similar serverless host with access to the MongoDB instance.
+### 📱 **Public Website (For Everyone)**
 
----
+#### 1. **Home Page** (`/`)
+- **Featured Event Section**: Showcases the highlighted event of the month with a banner image
+- **Upcoming Events**: Browse all upcoming events in a grid layout
+- **Event Categories**: Explore different types of events (Workshops, Hackathons, Bootcamps, etc.)
+- **Dark/Light Theme**: Toggle between dark and light mode using the theme button in the navbar
 
-## Features Implemented (easy wording)
+#### 2. **Browsing Events** (`/events`)
+- **Event List**: View all upcoming events sorted by date
+- **Event Card**: Each card shows:
+  - Event title
+  - Event banner image
+  - Category badge with color coding
+  - Date, time, and location
+  - Quick view option
+- **Click on Event Card**: Opens the detailed event page
 
-- Public pages: Home, Events list, Event details, About, Contact.
-- Admin Portal: Login, Dashboard, Create/Edit/Delete events.
-- Events are stored and retrieved from MongoDB via Next.js API routes.
-- Image upload supported (Cloudinary optional); event detail pages show full banners.
-- Event list optimized: the listing API returns only small fields (no large image blobs), and event card images lazy-load.
-- Client-side search and category filtering operate on the loaded event list (no extra API calls per keystroke).
-- External registration links open in a new tab (safe attributes applied).
-- Admin routes protected; public pages do not require authentication.
+#### 3. **Event Details Page** (`/events/[id]`)
+- **Full Event Information**:
+  - Large banner image at the top
+  - Event title and category
+  - Complete description and details
+  - Date, time, venue, and category info in a sticky sidebar (on desktop)
+  - Registration link button
+- **Back Button**: Click to go back to previous page
+- **Register Now**: External link to registration form (opens in new tab)
 
----
+#### 4. **About Page** (`/about`)
+- Information about the Microsoft Student Chapter
+- Club mission and vision
+- Contact information
 
-## How things are organized (short)
+#### 5. **Contact Page** (`/contact`)
+- Send messages to the admin team
+- Get support and feedback
 
-- `pages/` — Next.js pages and API routes.
-- `components/` — React components used by pages.
-- `lib/` — helpers (MongoDB connection, etc.).
-- `models/` — Mongoose schemas.
-
----
-
-## Notes & Next Steps (optional)
-
-- For best performance, store thumbnails or use a cloud image service (Cloudinary) and return thumbnail URLs in the events list.
-- To include event cards in the initial HTML for SEO, consider server-side rendering the events list (getServerSideProps). Currently the listing fetches client-side and shows skeletons while loading.
-
----
-
-If you'd like, I can: add thumbnails (Cloudinary), convert the events list to SSR, or run a production timing report.
-
----
-
-## Overview
-
-This repository contains a single Next.js application with two distinct experiences:
-
-- Public website: home, events listing, and event detail pages.
-- Protected Admin Portal: login, dashboard, and event management (create/edit/delete).
-
-MongoDB is the single source of truth for events. All event reads and writes go through the Next.js API routes.
+#### 6. **Navigation Bar**
+- **Logo/Brand**: Click to go to home page
+- **Navigation Links**: Home, About, Contact
+- **Admin Portal**: Direct link to admin dashboard (top right)
+- **Theme Toggle**: Switch between dark and light modes
 
 ---
 
-## Features
+## 🔐 Admin Portal — CRUD Operations Guide
 
-### Public Website
-- Home page with featured/upcoming events
-- Events listing (`/events`) showing upcoming events
-- Event details page (`/events/[id]`)
-- External registration links open in a new tab
-- Responsive design for desktop/tablet/mobile
+### **Where to Find the Admin Portal?**
+- **URL**: `http://localhost:3000/admin/login` (or click "ADMIN" button in navbar)
+- **Location**: Top right corner of the website navbar
 
-### Admin Portal
-- Admin login at `/admin/login` (session cookie-based)
-- Protected admin routes (dashboard and events pages)
-- Dashboard overview with stats and recent events
-- View, create, edit, and delete events
-- Image/banner upload with optional Cloudinary support (base64 fallback)
-- Responsive admin interface
+### **Admin Features Location Map**
 
-### Database & API
-- MongoDB via Mongoose
-- Next.js API routes for CRUD operations:
-   - `GET /api/events`
-   - `POST /api/events` (admin only)
-   - `GET /api/events/[id]`
-   - `PUT /api/events/[id]` (admin only)
-   - `DELETE /api/events/[id]` (admin only)
+#### **📋 Dashboard** (`/admin`)
+- Overview of system statistics
+- Quick links to all admin functions
+- View total events, registrations, and more
+
+#### **🔑 Admin Login** (`/admin/login`)
+1. Enter your **Admin Username**
+2. Enter your **Admin Password**
+3. Click **"Sign In"**
+4. You'll be redirected to the admin dashboard
+5. Session lasts for the duration of your activity (HTTP-only cookie)
 
 ---
 
-## Technology Stack
+### **1️⃣ CREATE Events** (`/admin/events/create`)
 
-Inspect `package.json` — the project uses:
+**Steps to Add a New Event:**
 
-- Next.js
-- React
-- MongoDB (Mongoose)
-- Lucide React (icons)
-
-No additional UI frameworks (Tailwind, Chakra, etc.) are required.
+1. Click **"Events"** in admin sidebar → **"Create Event"**
+2. Fill in the form fields:
+   - **Event Title**: Name of the event (e.g., "Web Development Workshop")
+   - **Description**: Detailed description of what the event is about
+   - **Category**: Select from dropdown (Workshop, Hackathon, Bootcamp, Competition, Talk, Seminar, Cultural, Sports, Conference, Other)
+   - **Date**: When the event will take place (YYYY-MM-DD format)
+   - **Time**: Event start time (e.g., 10:00 AM)
+   - **Venue**: Physical location or "Online" if virtual
+   - **Banner Image**: Upload event poster/image (base64 or URL)
+   - **Registration Link**: External link to registration form
+   - **Status**: Select "Upcoming", "Ongoing", or "Completed"
+   - **Featured**: Check this box to make it the featured event on homepage
+3. Click **"Create Event"** button
+4. Success message will appear, and you'll be redirected to the events list
 
 ---
 
-## Project Structure
+### **2️⃣ READ / VIEW Events** (`/admin/events`)
 
-Top-level folders/files of interest:
+**Browse All Events:**
 
+1. Click **"Events"** in admin sidebar
+2. See a table/list of all events with columns:
+   - Event Title
+   - Category
+   - Date
+   - Status
+   - Actions (View, Edit, Delete)
+3. Click **"View"** button to see full event details
+4. Or click event title to open details page
+
+**Search & Filter:**
+- Use search bar to find events by title
+- Filter by status (Upcoming, Ongoing, Completed)
+- Filter by category
+
+---
+
+### **3️⃣ UPDATE Events** (`/admin/events/edit/[id]`)
+
+**Edit an Existing Event:**
+
+1. Go to **"Events"** → Find event in list
+2. Click **"Edit"** button next to the event
+3. Modify any field you want to change:
+   - Update title, description, date, time, venue
+   - Change category or status
+   - Upload a new banner image
+   - Update registration link
+   - Toggle featured status
+4. Click **"Update Event"** button
+5. Success message appears, changes are saved to database
+
+**Quick Edit Tips:**
+- All fields can be updated independently
+- Changing "Featured" to true automatically removes featured status from other events
+- Date/time changes don't affect existing registrations
+
+---
+
+### **4️⃣ DELETE Events** (`/admin/events`)
+
+**Remove an Event:**
+
+1. Go to **"Events"** → Find event in list
+2. Click **"Delete"** button next to the event
+3. Confirm deletion when prompted (no undo available)
+4. Event is removed from database and website
+5. Any registrations linked to this event are also removed
+
+**Delete Warning:**
+⚠️ This action cannot be undone. Make sure the event is no longer needed.
+
+---
+
+## 🎯 Other Admin Features
+
+### **📊 Analytics** (`/admin/analytics`)
+- View event statistics and trends
+- See registration numbers
+- Track popular event categories
+- View attendance data
+
+### **📅 Calendar** (`/admin/calendar`)
+- Visual calendar view of all events
+- See events by month
+- Quick event details on hover
+- Click date to create new event
+
+### **👥 Registrations** (`/admin/registrations`)
+- View all event registrations
+- See registered user details
+- Export registration data
+- Send bulk messages to attendees
+
+### **📂 Categories** (`/admin/categories`)
+- Manage event categories
+- Create custom categories
+- Edit existing categories
+- Set category colors and icons
+
+### **⚙️ Settings** (`/admin/settings`)
+- Configure website settings
+- Update site title and description
+- Manage admin account
+- Set theme preferences
+- Configure notification emails
+
+---
+
+## 🛡️ Technical Architecture
+
+### **Database**
+- **MongoDB**: Stores all event data
+- **Collections**: Events, Users, Registrations, Categories
+- Connection string in `.env.local`
+
+### **Authentication**
+- HTTP-only cookie-based sessions (named `admin_session`)
+- Protected API endpoints verify admin credentials
+- Automatic logout after inactivity
+
+### **API Endpoints**
 ```
-pages/
-   index.js
-   events/
-      index.js
-      [id].js
-   admin/
-      login.js
-      index.js
-      events/
-         create.js
-         index.js
-         edit/[id].js
-   api/
-      events
-         index.js
-         [id].js
-components/
-lib/
-models/
-public/
-README.md
-package.json
+GET    /api/events              — Get all events
+GET    /api/events/[id]         — Get single event
+POST   /api/events              — Create event (admin only)
+PUT    /api/events/[id]         — Update event (admin only)
+DELETE /api/events/[id]         — Delete event (admin only)
+
+POST   /api/auth/login          — Admin login
+GET    /api/auth/session        — Check session
+POST   /api/auth/logout         — Admin logout
 ```
 
----
-
-## Routes
-
-Public routes:
-
-- `/`
-- `/events`
-- `/events/[id]`
-- `/about`
-- `/contact`
-
-Admin routes (protected):
-
-- `/admin/login`
-- `/admin`
-- `/admin/events`
-- `/admin/events/create`
-- `/admin/events/edit/[id]`
-
-API routes:
-
-- `/api/events`
-- `/api/events/[id]`
+### **Performance Optimizations**
+- Server-side rendering (SSR) for home page
+- Response caching (1 hour for event endpoints)
+- Optimized image loading with responsive sizes
+- Request deduplication for event details
+- Mobile-responsive design with CSS media queries
 
 ---
 
-## Event Schema
+## 📋 Key Features Checklist
 
-The Mongoose model `models/Event.js` defines the event document with these fields:
+### **Public Features** ✅
+- [x] View all upcoming events
+- [x] Search and filter events by category
+- [x] View detailed event information
+- [x] Register for events via external links
+- [x] Dark/light theme toggle
+- [x] Fully responsive mobile design
+- [x] Fast loading (1-2 seconds for event details)
 
-- `title` (String, required)
-- `description` (String, required)
-- `date` (String, format YYYY-MM-DD, required)
-- `time` (String, required)
-- `venue` (String, required)
-- `category` (String, enum)
-- `bannerImage` (String, base64 or HTTPS URL)
-- `registrationLink` (String)
-- `status` (String, enum: Upcoming/Completed/Draft)
-- `featured` (Boolean)
-
----
-
-## Environment Variables
-
-Required variables (placeholders):
-
-```
-MONGODB_URI=your_mongodb_connection_string
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your_admin_password
-
-# Optional (Cloudinary unsigned uploads)
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
-NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=
-```
-
-Do NOT commit real credentials to the repository.
+### **Admin Features** ✅
+- [x] **Create** new events with all details
+- [x] **Read** view all events and details
+- [x] **Update** existing event information
+- [x] **Delete** events from database
+- [x] Mark events as featured
+- [x] Filter by status and category
+- [x] Track registrations
+- [x] View analytics and statistics
+- [x] Manage categories
+- [x] Configure settings
 
 ---
 
-## Local Development
+## 🌍 Deployment
 
-1. Clone the repo:
-
+### **Deploy on Vercel (Recommended)**
 ```bash
-git clone https://github.com/aasthasingla15/adminportal.git
-cd adminportal
-npm install
+# Login to Vercel
+npm i -g vercel
+vercel
+
+# Configure environment variables in Vercel dashboard
+# Add MONGODB_URI, ADMIN_USERNAME, ADMIN_PASSWORD
+
+# Deploy
+vercel --prod
 ```
 
-2. Create `.env.local` from `.env.example` and set `MONGODB_URI` and admin credentials.
-
-3. Run the dev server:
-
-```bash
-npm run dev
-```
-
-Open `http://localhost:3000`.
+### **Deploy on Other Platforms**
+Ensure your host has:
+- Node.js 14+ support
+- Access to MongoDB
+- Environment variable configuration support
 
 ---
 
-## Build & Deploy
+## 📊 Assumptions & Architecture
 
-Build locally:
-
-```bash
-npm run build
-```
-
-Deploy to Vercel by connecting the GitHub repository and setting `MONGODB_URI` in Vercel environment variables. Ensure MongoDB Atlas network access allows Vercel IPs or set access appropriately.
-
----
-
-## Authentication
-
-Admin authentication uses an HTTP-only cookie (`admin_session`) set after a successful login. The server-side API routes check this cookie before allowing create/update/delete operations.
-
-If demo credentials are present in `.env.example`, they can be used for testing; otherwise configure admin credentials in `.env.local`.
+- **MongoDB** is the single source of truth for all event data
+- **Admin authentication** uses HTTP-only cookies (secure against XSS)
+- **Banner images** can be base64-encoded or remote URLs
+- **List API** excludes large image blobs for faster loading
+- **Session timeout** prevents unauthorized access
+- **API caching** reduces database load and improves response times
 
 ---
 
-## Removing Test Data
+## 🐛 Troubleshooting
 
-Temporary test events (created during debugging) have been removed from the production database. If you see test titles like "SYNC TEST EVENT" or "SYNC PUBLIC EVENT", delete them via the Admin Dashboard or the API.
+### **"Unable to load event" error**
+- Check MongoDB connection string in `.env.local`
+- Verify event ID is correct
+- Check database has event data
 
----
+### **Admin login fails**
+- Verify username and password in `.env.local`
+- Check cookies are enabled in browser
+- Clear browser cache and try again
 
-## Design Decisions
+### **Images not displaying**
+- Check image URL is accessible
+- For base64 images, verify data format
+- Try re-uploading image in admin panel
 
-- Keep public and admin experiences separate within one Next.js application.
-- MongoDB is the single source of truth — no runtime localStorage or mock fallbacks are used for event data.
-- External registration links open in new tabs; internal navigation uses Next.js `Link` and opens in the same tab.
-
----
-
-## Contact
-
-For questions, open an issue on the repository or contact the maintainer.
-
-
-
-
-   - **Light Editorial Mode**: Matches the provided mockup screenshot. Features a clean white/lavender background, violet primary accents,rounded cards, subtle shadows, and the **provided video integrated on the right (60%) of the Hero section**.
-   - **Cinematic Dark Glass Mode**: Renders the **provided video as a fixed, fullscreen viewport background**. All components, sidebars, forms, and cards transition into semi-transparent glass layouts with dark overlays and `backdrop-filter: blur(20px)` that float above the playing video.
-   - Includes a floating Sun/Moon toggle button in the navbar to switch modes smoothly.
-
-2. **Automatic Video Asset Migration**:
-   - The application features a self-healing setup script on load. It automatically detects the raw `.mp4` file in the workspace root and moves/copies it to `public/videos/hero.mp4` upon server start, bypassing local permissions blockages.
-
-3. **Admin Portal & Protected Routes**:
-   - Secure login route (`/login`) with credential validation and secure HTTP-Only session cookies.
-   - Full control dashboard (`/admin`) with server-side authorization blocks. Unauthenticated users are redirected automatically.
-
-4. **Featured Event Integration**:
-   - Added a `featured` boolean flag to the event model.
-   - Built check-controls inside the creation and editing dashboards.
-   - Displayed the marked featured event in a custom prominent side-by-side homepage spotlight banner.
-
-5. **Complete CRUD (Create, Read, Update, Delete)**:
-   - Create new events with responsive forms.
-   - Choose from categories: **Workshop, Hackathon, Bootcamp, Competition, Talk, Seminar, Cultural, Sports, Conference, Other**.
-   - Live-rendering tilt card views inside the admin panel.
-   - Delete entries securely with confirmation controls.
-
-6. **Image Uploads (Cloudinary with Base64 Fallback)**:
-   - Supports direct unsigned file uploads to Cloudinary. If `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` and `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` are configured in `.env.local`, banners are uploaded directly to Cloudinary and stored as secure HTTPS URLs in MongoDB.
-   - If not configured, or if the API call fails, the client automatically falls back to encoding the files as Base64 strings. This guarantees out-of-the-box functionality without mandatory configuration, while supporting a production-ready image storage strategy.
-
-7. **Automatic Unfeaturing Hook**:
-   - The backend API (`POST /api/events` and `PUT /api/events/[id]`) automatically updates other entries to set `featured: false` if a new/updated event is flagged as featured. This guarantees only one spotlight event exists at a time.
-
-8. **Dynamic Past Events Exclusion**:
-   - The public Homepage Carousel and Events Listing pages compare event date strings with the current date, automatically excluding past events from the "Upcoming Events" listings.
-
-9. **Dashboard Layout Realignment**:
-   - Rewrote the Admin overview dashboard (`/admin`) to match the requested wireframe structure, rendering statistics cards (Total, Upcoming, Categories, Published) and a Recent Events list with action button links (View, Edit, Delete).
-   - Custom CSS collapses columns and hides auxiliary table cells on small viewports for responsive sizing.
+### **Slow event loading**
+- Clear browser cache
+- Check MongoDB query performance
+- Verify network connection speed
 
 ---
 
-## 🛠️ Tech Stack
+## 📞 Support & Contact
 
-- **Framework**: Next.js
-- **Frontend Logic**: React
-- **Icons**: Lucide React
-- **Database**: MongoDB (via Mongoose ODM)
-- **Styling**: Vanilla CSS (CSS Variables + CSS Modules for maximum performance and visual precision)
-
----
-
-## 📁 Setup Instructions
-
-### Step 1: Install Dependencies
-Open a command prompt or terminal in the project directory and run:
-```bash
-npm install
-```
-
-### Step 2: Configure Environment
-Create a `.env.local` file in the project root (you can copy `.env.example`):
-```bash
-cp .env.example .env.local
-```
-Ensure you have MongoDB running locally at `mongodb://127.0.0.1:27017` (the default port), or update the `MONGODB_URI` to point to a MongoDB Atlas cluster.
-
-### Step 3: Run Development Server
-Start the development server:
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+For issues or questions:
+- Email: contact@mscevents.com
+- GitHub Issues: [github.com/aasthasingla15/adminportal/issues](https://github.com/aasthasingla15/adminportal/issues)
+- Contact Form: Available on `/contact` page
+- GitHub Repository: [github.com/aasthasingla15/adminportal](https://github.com/aasthasingla15/adminportal)
 
 ---
 
-## 🔐 Credentials
+## 📄 License
 
-Use the following default credentials to log into the Admin Dashboard:
-- **Username**: `admin`
-- **Password**: `adminpassword123`
-
-To customize these, modify the values inside `.env.local` in the project root.
+This project is licensed under MIT License.
 
 ---
 
-## 🔌 API Routes
-
-- `GET /api/events` - Retrieves all events from the database sorted by date.
-- `POST /api/events` - Creates a new event. (Requires Admin session).
-- `GET /api/events/[id]` - Retrieves a specific event.
-- `PUT /api/events/[id]` - Updates an event. (Requires Admin session).
-- `DELETE /api/events/[id]` - Deletes an event. (Requires Admin session).
-
----
-
-## 🗄️ Database Schema
-
-```javascript
-{
-  title: String,
-  description: String,
-  date: String,
-  time: String,
-  venue: String,
-  category: String,
-  bannerImage: String, // Stored as Base64 string
-  registrationLink: String,
-  featured: Boolean,
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
----
-
-## 📱 Mobile Responsiveness
-
-- Hamburger navigation drawer on public pages.
-- Sidebar collapses into a responsive drawer on the admin dashboard.
-- Admin lists adapt from data tables into grid cards on viewports under `768px` to prevent horizontal scrolling.
-- Forms, hero grids, and statistics cards transition into single-column layouts for touch-friendly interfaces.
+**Last Updated**: 2026-08-14  
+**Version**: 1.0.0
