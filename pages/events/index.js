@@ -19,6 +19,7 @@ export async function getServerSideProps() {
       time: 1,
       venue: 1,
       category: 1,
+      bannerImage: 1,
       registrationLink: 1,
       status: 1,
       featured: 1

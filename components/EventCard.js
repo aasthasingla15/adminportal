@@ -2,9 +2,18 @@ import Link from 'next/link';
 import { Calendar, MapPin, ExternalLink } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
+const buildResponsiveImageUrl = (url, width = 1200) => {
+  if (!url || url.startsWith('data:')) return url;
+  if (!url.startsWith('http')) return url;
+
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}auto=format&fit=crop&w=${width}&q=80`;
+};
+
 export default function EventCard({ event }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const cardImage = buildResponsiveImageUrl(event.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60', 900);
 
   const categoryColors = {
     Workshop:    { bg: 'rgba(109,61,245,0.10)',  text: '#6D3DF5',  border: 'rgba(109,61,245,0.25)'  },
@@ -55,11 +64,13 @@ export default function EventCard({ event }) {
         <Link href={`/events/${event._id}`} style={{ display: 'block', textDecoration: 'none' }}>
           <div style={{ height: '180px', overflow: 'hidden', position: 'relative' }}>
             <img
-              src={event.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60'}
+              src={cardImage}
+              srcSet={`${buildResponsiveImageUrl(event.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60', 600)} 600w, ${buildResponsiveImageUrl(event.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60', 900)} 900w, ${buildResponsiveImageUrl(event.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60', 1200)} 1200w`}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
               alt={event.title}
               loading="lazy"
               className="event-card-img"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 400ms ease' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', transition: 'transform 400ms ease' }}
             />
             {/* gradient overlay */}
             <div style={{

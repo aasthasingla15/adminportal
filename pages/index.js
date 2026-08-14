@@ -47,6 +47,14 @@ export async function getServerSideProps() {
   }
 }
 
+const buildResponsiveImageUrl = (url, width = 1200) => {
+  if (!url || url.startsWith('data:')) return url;
+  if (!url.startsWith('http')) return url;
+
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}auto=format&fit=crop&w=${width}&q=80`;
+};
+
 export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
   const router = useRouter();
   const { theme } = useTheme();
@@ -54,6 +62,7 @@ export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
 
   const [activeEvents, setActiveEvents] = useState(upcomingEvents);
   const [activeFeatured, setActiveFeatured] = useState(featuredEvent);
+  const featuredImage = buildResponsiveImageUrl(activeFeatured?.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80', 1400);
 
   const [revealedSections, setRevealedSections] = useState({
     philosophy: false,
@@ -423,9 +432,11 @@ export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
               {/* Left Column: Banner */}
               <div style={{ position: 'relative', height: '420px', width: '100%' }}>
                 <img 
-                  src={activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80'} 
-                  alt={activeFeatured.title} 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  src={featuredImage}
+                  srcSet={`${buildResponsiveImageUrl(activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80', 800)} 800w, ${buildResponsiveImageUrl(activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80', 1200)} 1200w, ${buildResponsiveImageUrl(activeFeatured.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1000&auto=format&fit=crop&q=80', 1600)} 1600w`}
+                  sizes="(max-width: 768px) 100vw, 55vw"
+                  alt={activeFeatured.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
                 />
               </div>
 
@@ -839,6 +850,12 @@ export default function Home({ upcomingEvents, featuredEvent, fromDb }) {
           }
           .upcoming-events-grid {
             grid-template-columns: 1fr !important;
+          }
+          .featured-event-layout {
+            border-radius: 16px !important;
+          }
+          .featured-event-layout > div:first-child {
+            height: 260px !important;
           }
           .philosophy-header {
             grid-template-columns: 1fr !important;
