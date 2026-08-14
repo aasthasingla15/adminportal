@@ -7,17 +7,54 @@ import Footer from '../../components/Footer';
 import { useTheme } from '../../context/ThemeContext';
 import { useRouter } from 'next/router';
 import { useEffect, useState, useRef } from 'react';
+import dbConnect from '../../lib/mongodb';
+import Event from '../../models/Event';
 
-export default function EventDetailPage() {
+// Skeleton Loader Component
+function EventSkeleton({ isDark }) {
+  return (
+    <div style={{
+      backgroundColor: isDark ? '#08080C' : '#F8F7FF',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      animation: 'pulse 2s infinite'
+    }}>
+      <Navbar />
+      <div style={{ marginTop: '72px', flex: 1 }}>
+        <div style={{
+          width: '100%',
+          height: '350px',
+          backgroundColor: isDark ? '#1a1a24' : '#e5e5f0',
+          animation: 'pulse 2s infinite'
+        }} />
+        <div style={{ padding: '50px 8%', maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '60fr 40fr', gap: '48px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ width: '150px', height: '20px', backgroundColor: isDark ? '#1a1a24' : '#e5e5f0', borderRadius: '4px', animation: 'pulse 2s infinite' }} />
+            <div style={{ width: '60%', height: '40px', backgroundColor: isDark ? '#1a1a24' : '#e5e5f0', borderRadius: '4px', animation: 'pulse 2s infinite' }} />
+            <div style={{ width: '100%', height: '120px', backgroundColor: isDark ? '#1a1a24' : '#e5e5f0', borderRadius: '4px', animation: 'pulse 2s infinite' }} />
+          </div>
+          <div style={{ width: '100%', height: '250px', backgroundColor: isDark ? '#1a1a24' : '#e5e5f0', borderRadius: '8px', animation: 'pulse 2s infinite' }} />
+        </div>
+      </div>
+      <style jsx global>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default function EventDetailPage({ event: initialEvent, error: initialError }) {
   const router = useRouter();
-  const { id } = router.query;
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const requestCacheRef = useRef(new Map());
 
-  const [event, setEvent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [event, setEvent] = useState(initialEvent || null);
+  const [loading, setLoading] = useState(!initialEvent);
+  const [error, setError] = useState(initialError || '');
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -35,31 +72,22 @@ export default function EventDetailPage() {
   };
 
   useEffect(() => {
-    if (!id) return;
-    
-    // Check if request is already in progress or cached
-    if (requestCacheRef.current.has(id)) {
-      const cachedData = requestCacheRef.current.get(id);
-      if (cachedData.data) {
-        setEvent(cachedData.data);
-        setLoading(false);
-        return;
-      }
-    }
+    const { id } = router.query;
+    if (!id || event) return;
 
     let cancelled = false;
     setLoading(true);
     setError('');
 
-    fetch(`/api/events/${id}?t=${Date.now()}`, {
-      signal: AbortSignal.timeout(8000) // 8 second timeout for faster failure
+    // Fast fetch with aggressive timeout
+    fetch(`/api/events/${id}`, { 
+      signal: AbortSignal.timeout(5000) // 5 second timeout
     })
       .then((r) => r.json())
       .then((json) => {
         if (cancelled) return;
         if (json.success && json.data) {
           setEvent(json.data);
-          requestCacheRef.current.set(id, { data: json.data, timestamp: Date.now() });
         } else {
           setError(json.message || 'Unable to load event.');
         }
@@ -67,14 +95,18 @@ export default function EventDetailPage() {
       .catch((err) => {
         if (cancelled) return;
         console.error('Event fetch error:', err);
-        setError('Unable to load event. Please try again.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, [id]);
+  }, [router.query, event]);
+
+  // Show skeleton while loading
+  if (!event && loading && !error) {
+    return <EventSkeleton isDark={isDark} />;
+  }
 
   return (
     <div style={{
@@ -104,19 +136,23 @@ export default function EventDetailPage() {
           overflow: 'hidden'
         }} className="detail-banner-box">
           {event && event.bannerImage ? (
-            <img
-              src={event.bannerImage}
-              alt={event.title}
-              loading="lazy"
-              decoding="async"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                opacity: isDark ? 0.5 : 0.75,
-                backfaceVisibility: 'hidden'
-              }}
-            />
+            <picture>
+              <img
+                src={event.bannerImage}
+                alt={event.title}
+                loading="lazy"
+                decoding="async"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  opacity: isDark ? 0.5 : 0.75,
+                  backfaceVisibility: 'hidden',
+                  willChange: 'transform',
+                  contentVisibility: 'auto'
+                }}
+              />
+            </picture>
           ) : (
             <div style={{ width: '100%', height: '100%', background: isDark ? '#0B0B0F' : '#F3F4F6' }} />
           )}
@@ -365,4 +401,56 @@ export default function EventDetailPage() {
       `}</style>
     </div>
   );
+}
+
+// Pre-render event pages at build time (ISR)
+export async function getStaticPaths() {
+  try {
+    await dbConnect();
+    const events = await Event.find({ status: 'Upcoming' }).select('_id').lean().limit(10);
+    
+    const paths = events.map((event) => ({
+      params: { id: event._id.toString() }
+    }));
+
+    return {
+      paths,
+      fallback: 'blocking' // Generate new pages on demand
+    };
+  } catch (err) {
+    console.error('getStaticPaths error:', err);
+    return { paths: [], fallback: 'blocking' };
+  }
+}
+
+// Fetch and cache event data with ISR (Incremental Static Regeneration)
+export async function getStaticProps({ params }) {
+  try {
+    await dbConnect();
+    const event = await Event.findById(params.id).lean();
+    
+    if (!event) {
+      return {
+        notFound: true,
+        revalidate: 300
+      };
+    }
+
+    return {
+      props: {
+        event: JSON.parse(JSON.stringify(event)),
+        error: null
+      },
+      revalidate: 1800 // Revalidate every 30 minutes
+    };
+  } catch (err) {
+    console.error(`getStaticProps error for ${params.id}:`, err.message);
+    return {
+      props: {
+        event: null,
+        error: 'Unable to load event.'
+      },
+      revalidate: 300
+    };
+  }
 }

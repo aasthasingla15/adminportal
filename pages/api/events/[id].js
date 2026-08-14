@@ -23,20 +23,30 @@ export default async function handler(req, res) {
   switch (method) {
     case 'GET':
       try {
+        // Aggressive caching for public API
+        res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=7200, stale-while-revalidate=86400');
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('ETag', `"${id}"`);
+        
+        // Return 304 if resource hasn't changed
+        if (req.headers['if-none-match'] === `"${id}"`) {
+          return res.status(304).end();
+        }
+
         await dbConnect();
         const includeBanner = !(req.query.includeBanner === '0' || req.query.includeBanner === 'false');
         let event;
+        
         if (includeBanner) {
           event = await Event.findById(id);
         } else {
           event = await Event.findById(id).select('-bannerImage').lean();
         }
+        
         if (!event) {
           return res.status(404).json({ success: false, message: 'Event not found.' });
         }
-        // Add caching headers for 1 hour
-        res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=7200');
-        res.setHeader('Content-Type', 'application/json');
+        
         return res.status(200).json({ success: true, data: event });
       } catch (error) {
         console.error(`GET /api/events/${id} — DB error:`, error.message);
