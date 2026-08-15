@@ -62,27 +62,33 @@ export default function AdminEventsListPage() {
 
   // Filter and search live
   useEffect(() => {
+    const normalizeStatus = (value) => {
+      const status = (value || '').toString().trim();
+      if (!status) return 'Upcoming';
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    };
+
     let result = events;
 
     // Search query match
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
       result = result.filter(e =>
-        e.title.toLowerCase().includes(q) ||
-        e.description.toLowerCase().includes(q) ||
-        e.venue.toLowerCase().includes(q) ||
-        e.category.toLowerCase().includes(q)
+        (e.title || '').toLowerCase().includes(q) ||
+        (e.description || '').toLowerCase().includes(q) ||
+        (e.venue || '').toLowerCase().includes(q) ||
+        (e.category || '').toLowerCase().includes(q)
       );
     }
 
     // Filter by Active Tab (All, Upcoming, Completed, Draft)
     const now = new Date();
     if (activeFilterTab === 'Upcoming') {
-      result = result.filter(e => new Date(e.date) >= now);
+      result = result.filter(e => normalizeStatus(e.status) !== 'Draft' && (!e.date || new Date(e.date) >= now));
     } else if (activeFilterTab === 'Completed') {
-      result = result.filter(e => new Date(e.date) < now);
+      result = result.filter(e => normalizeStatus(e.status) === 'Completed' || (e.date && new Date(e.date) < now && normalizeStatus(e.status) !== 'Draft'));
     } else if (activeFilterTab === 'Draft') {
-      result = result.filter(e => e.status === 'Draft');
+      result = result.filter(e => normalizeStatus(e.status) === 'Draft');
     }
 
     // Category select filter

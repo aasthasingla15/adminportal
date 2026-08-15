@@ -9,15 +9,31 @@ import { useTheme } from '../context/ThemeContext';
 import dbConnect from '../lib/mongodb';
 import Event from '../models/Event';
 
+const normalizeEventStatus = (value) => {
+  const status = (value || '').toString().trim();
+  if (!status) return 'Upcoming';
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+};
+
+const isPublicVisibleEvent = (event) => {
+  const status = normalizeEventStatus(event?.status);
+  if (status === 'Draft') return false;
+
+  if (!event?.date) return true;
+
+  const eventDate = new Date(event.date);
+  if (Number.isNaN(eventDate.getTime())) return true;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return eventDate >= today;
+};
+
 export async function getStaticProps() {
   try {
     await dbConnect();
-    const todayString = new Date().toISOString().split('T')[0];
-    const rawEvents = await Event.find({ 
-      status: 'Upcoming',
-      date: { $gte: todayString }
-    }).sort({ date: 1 }).lean();
-    const events = JSON.parse(JSON.stringify(rawEvents));
+    const rawEvents = await Event.find({}).sort({ date: 1 }).lean();
+    const events = JSON.parse(JSON.stringify(rawEvents)).filter(isPublicVisibleEvent);
 
     let featuredEvent = events.find(e => e.featured === true) || null;
     if (!featuredEvent && events.length > 0) {

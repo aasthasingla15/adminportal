@@ -8,11 +8,30 @@ import { useTheme } from '../../context/ThemeContext';
 import dbConnect from '../../lib/mongodb';
 import Event from '../../models/Event';
 
+const normalizeEventStatus = (value) => {
+  const status = (value || '').toString().trim();
+  if (!status) return 'Upcoming';
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+};
+
+const isPublicVisibleEvent = (event) => {
+  const status = normalizeEventStatus(event?.status);
+  if (status === 'Draft') return false;
+
+  if (!event?.date) return true;
+
+  const eventDate = new Date(event.date);
+  if (Number.isNaN(eventDate.getTime())) return true;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return eventDate >= today;
+};
+
 export async function getStaticProps() {
   try {
     await dbConnect();
-    const todayString = new Date().toISOString().split('T')[0];
-    const raw = await Event.find({ status: 'Upcoming', date: { $gte: todayString } }, {
+    const raw = await Event.find({}, {
       title: 1,
       description: 1,
       date: 1,
@@ -24,8 +43,9 @@ export async function getStaticProps() {
       status: 1,
       featured: 1
     }).sort({ date: 1 }).lean();
+    const visibleEvents = JSON.parse(JSON.stringify(raw)).filter(isPublicVisibleEvent);
     return {
-      props: { initialEvents: JSON.parse(JSON.stringify(raw)) },
+      props: { initialEvents: visibleEvents },
       revalidate: 60
     };
   } catch (err) {
@@ -55,10 +75,29 @@ export default function EventsPage({ initialEvents }) {
       const data = await res.json();
 
       if (data.success && data.data) {
-        const todayString = new Date().toISOString().split('T')[0];
-        const upcomingOnly = data.data.filter(e => e.status === 'Upcoming' && e.date >= todayString);
-        setEvents(upcomingOnly);
-        setFilteredEvents(upcomingOnly);
+        const normalizeStatus = (value) => {
+          const status = (value || '').toString().trim();
+          if (!status) return 'Upcoming';
+          return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+        };
+
+        const isPublicVisibleEvent = (event) => {
+          const status = normalizeStatus(event?.status);
+          if (status === 'Draft') return false;
+
+          if (!event?.date) return true;
+
+          const eventDate = new Date(event.date);
+          if (Number.isNaN(eventDate.getTime())) return true;
+
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          return eventDate >= today;
+        };
+
+        const visibleEvents = data.data.filter(isPublicVisibleEvent);
+        setEvents(visibleEvents);
+        setFilteredEvents(visibleEvents);
       } else {
         // API responded but with an error — show it, do NOT use localStorage
         setError(data.message || 'Unable to load events. Please try again.');
