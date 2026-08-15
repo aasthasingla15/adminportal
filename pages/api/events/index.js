@@ -16,16 +16,12 @@ export default async function handler(req, res) {
   switch (method) {
     case 'GET':
       try {
-        res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('ETag', '"events-list"');
-
-        if (req.headers['if-none-match'] === '"events-list"') {
-          return res.status(304).end();
-        }
 
         await dbConnect();
-        // Return only the fields needed for the Events listing to avoid sending large base64 images
         const events = await Event.find({}, {
           title: 1,
           description: 1,
@@ -92,6 +88,17 @@ export default async function handler(req, res) {
         }
 
         const event = await Event.create(req.body);
+
+        try {
+          await res.revalidate('/');
+          await res.revalidate('/events');
+          if (event && event._id) {
+            await res.revalidate(`/events/${event._id}`);
+          }
+        } catch (revalidateError) {
+          console.warn('Revalidate after create failed:', revalidateError.message);
+        }
+
         return res.status(201).json({ success: true, data: event });
       } catch (error) {
         console.error('POST /api/events — DB error:', error.message);

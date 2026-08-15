@@ -20,8 +20,8 @@ export default function AdminDashboardOverview() {
       const timeout = setTimeout(() => controller.abort(), 2000);
 
       const res = await fetch('/api/events', {
-        cache: 'force-cache',
-        headers: { 'Cache-Control': 'max-age=300' },
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' },
         signal: controller.signal
       });
 

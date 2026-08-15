@@ -78,6 +78,14 @@ export default async function handler(req, res) {
           return res.status(404).json({ success: false, message: 'Event not found.' });
         }
 
+        try {
+          await res.revalidate('/');
+          await res.revalidate('/events');
+          await res.revalidate(`/events/${id}`);
+        } catch (revalidateError) {
+          console.warn('Revalidate after update failed:', revalidateError.message);
+        }
+
         return res.status(200).json({ success: true, data: event });
       } catch (error) {
         console.error(`PUT /api/events/${id} — DB error:`, error.message);
@@ -101,6 +109,15 @@ export default async function handler(req, res) {
         if (!deletedEvent) {
           return res.status(404).json({ success: false, message: 'Event not found.' });
         }
+
+        try {
+          await res.revalidate('/');
+          await res.revalidate('/events');
+          await res.revalidate(`/events/${id}`);
+        } catch (revalidateError) {
+          console.warn('Revalidate after delete failed:', revalidateError.message);
+        }
+
         return res.status(200).json({ success: true, data: {} });
       } catch (error) {
         console.error(`DELETE /api/events/${id} — DB error:`, error.message);
