@@ -16,8 +16,18 @@ export default function AdminDashboardOverview() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/events', { cache: 'no-store' });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2000);
+
+      const res = await fetch('/api/events', {
+        cache: 'force-cache',
+        headers: { 'Cache-Control': 'max-age=300' },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
       const data = await res.json();
+
       if (data.success && data.data) {
         setEvents(data.data);
       } else {

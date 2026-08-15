@@ -16,6 +16,14 @@ export default async function handler(req, res) {
   switch (method) {
     case 'GET':
       try {
+        res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600');
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('ETag', '"events-list"');
+
+        if (req.headers['if-none-match'] === '"events-list"') {
+          return res.status(304).end();
+        }
+
         await dbConnect();
         // Return only the fields needed for the Events listing to avoid sending large base64 images
         const events = await Event.find({}, {
@@ -29,7 +37,7 @@ export default async function handler(req, res) {
           registrationLink: 1,
           status: 1,
           featured: 1
-        }).sort({ date: 1 }).lean();
+        }).sort({ date: 1 }).limit(200).lean();
 
         return res.status(200).json({ success: true, data: events });
       } catch (error) {

@@ -1,19 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  compress: true, // Enable gzip compression
-  swcMinify: true, // Use SWC for faster minification
+  compress: true,
+  swcMinify: true,
   images: {
     unoptimized: true
   },
-  // Enable static generation optimization
   staticPageGenerationTimeout: 30,
-  // Optimize performance
-  experimental: {
-    isrMemoryCacheSize: 52 * 1024 * 1024, // 52MB for ISR cache
-    esmExternals: true,
-  },
-  // Response headers for caching
+  cacheMaxMemorySize: 52 * 1024 * 1024,
   async headers() {
     return [
       {
@@ -36,6 +30,6 @@ const nextConfig = {
       }
     ];
   }
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
